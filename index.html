@@ -176,9 +176,9 @@ button,input,select,textarea{font-family:var(--mono); font-size:12px}
 .sel-btn .fl{font-size:9px; color:var(--dim); flex-shrink:0}
 .sel-panel{position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:60; background:var(--sunk);
   border:1px solid var(--border); border-radius:2px; max-height:240px; overflow-y:auto; box-shadow:0 8px 24px rgba(0,0,0,.5)}
-.sel-op{padding:6px 8px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--fg)}
-.sel-op:hover{background:rgba(140,140,140,.08)}
-.sel-op.sel-on{color:var(--amber); background:rgba(226,177,68,.08)}
+.sel-fila{padding:6px 8px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--fg)}
+.sel-fila:hover{background:rgba(140,140,140,.08)}
+.sel-fila.sel-on{color:var(--amber); background:rgba(226,177,68,.08)}
 
 /* ---------- mapa ---------- */
 .mapa-grid{display:grid; grid-template-columns:minmax(340px,1.35fr) minmax(300px,1fr); gap:16px; align-items:start}
@@ -237,8 +237,8 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
 <div id="carga">
   <div class="caja">
     <div style="font-size:13px">
-      <span style="color:var(--green)">rip</span><span style="color:var(--blue)">@journal</span><span style="color:var(--dim)">:~</span><span style="color:var(--green)">$</span>
-      <span style="color:var(--white);font-weight:700">confluencia</span><span class="v6-cursor"></span>
+      <span style="color:var(--green)">rip</span><span style="color:var(--blue)">@dashboard</span><span style="color:var(--dim)">:~</span><span style="color:var(--green)">$</span>
+      <span style="color:var(--white);font-weight:700">trading operation</span><span class="v6-cursor"></span>
     </div>
     <div class="carga-carril"><span class="carga-barra"></span></div>
     <div style="font-size:11px;color:var(--dim);margin-top:10px">// montando la mesa…</div>
@@ -248,15 +248,21 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
 <div class="hoja" id="app" hidden>
 
   <div class="prompt">
-    <span style="color:var(--green)">rip</span><span style="color:var(--blue)">@journal</span><span style="color:var(--dim)">:~</span><span style="color:var(--green)">$</span>
-    <span style="color:var(--white);font-weight:700">confluencia multi-temporalidad</span><span class="v6-cursor"></span>
+    <span style="color:var(--green)">rip</span><span style="color:var(--blue)">@dashboard</span><span style="color:var(--dim)">:~</span><span style="color:var(--green)">$</span>
+    <span style="color:var(--white);font-weight:700">trading operation</span><span class="v6-cursor"></span>
   </div>
-  <div style="font-size:11px;color:var(--dim);margin-top:3px">// cuatro capturas, un sesgo ponderado y el trade que sale de ahí</div>
+  <div style="font-size:11px;color:var(--dim);margin-top:3px">// cuatro capturas, un sesgo ponderado y el trade que sale de ahí — precio en vivo desde Binance</div>
 
   <div class="ticker">
     <div>
-      <label class="lbl" for="i-activo">activo</label>
-      <input id="i-activo" class="inp" value="BTC/USDT" autocomplete="off" spellcheck="false">
+      <span class="lbl">activo</span>
+      <div class="sel" id="sel-activo"></div>
+      <input id="i-activo" class="inp" hidden autocomplete="off" spellcheck="false" aria-label="Escribe otro par">
+      <div class="fila" style="gap:8px;margin-top:4px">
+        <button class="cmd" id="btn-otro">[<b>otro</b>]</button>
+        <button class="cmd" id="btn-refrescar">[<b>actualizar</b>]</button>
+      </div>
+      <div id="mercado-eco" style="font-size:10px;color:var(--dim);margin-top:3px">—</div>
     </div>
     <div>
       <label class="lbl" for="i-precio">precio actual</label>
@@ -281,6 +287,7 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
         <button class="cmd" id="btn-limpiar-img">[<b>quitar todas</b>]</button>
         <span style="color:var(--dim);font-size:11px">// las capturas se guardan en este navegador, no salen de aquí</span>
       </div>
+      <div id="aviso-activo"></div>
       <div id="aviso-guardado" hidden class="aviso amb">// no hay sitio para guardar las capturas en este navegador: se ven ahora, pero se pierden al recargar.</div>
     </div>
   </section>
@@ -486,6 +493,18 @@ function fmt(n, d){
   if(n === null || n === undefined || !isFinite(n)) return "—";
   return new Intl.NumberFormat("es-ES",{minimumFractionDigits:d===undefined?2:d, maximumFractionDigits:d===undefined?2:d}).format(n);
 }
+// Un par vale 68.000 o 0,000012 según cuál sea: los decimales salen de la magnitud.
+function decs(p){
+  p = Math.abs(p);
+  if(!isFinite(p) || p === 0) return 2;
+  if(p >= 1) return 2;
+  if(p >= 0.01) return 4;
+  if(p >= 0.0001) return 6;
+  return 8;
+}
+function fmtP(p){ return isFinite(p) ? fmt(p, decs(p)) : "—"; }
+function fmtEje(p){ return Math.abs(p) >= 1000 ? nf0.format(p) : fmt(p, decs(p)); }
+
 function fmtQty(n){
   if(!isFinite(n) || n === 0) return "—";
   var d = Math.abs(n) >= 100 ? 2 : Math.abs(n) >= 1 ? 4 : 6;
@@ -532,6 +551,56 @@ function svgEl(tag, attrs){
   var n = document.createElementNS("http://www.w3.org/2000/svg", tag);
   for(var k in attrs) if(attrs[k] !== null && attrs[k] !== undefined) n.setAttribute(k, attrs[k]);
   return n;
+}
+
+/* ================= datos de mercado (Binance) =================
+   Binance no publica un "top 20", así que la lista son los veinte pares en
+   USDT con más volumen sostenido. Se piden todos de una vez con ?symbols=,
+   que es una sola petición pequeña en vez de los varios megas que devuelve
+   el endpoint sin filtrar.
+
+   Ojo: la API es pública y permite CORS, pero dentro de un artefacto de
+   claude.ai la CSP bloquea cualquier fetch externo. Ahí el precio se escribe
+   a mano y la página lo dice en vez de quedarse en blanco. */
+var SIMBOLOS = ["BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT","DOGEUSDT","ADAUSDT",
+  "AVAXUSDT","LINKUSDT","TRXUSDT","DOTUSDT","TONUSDT","SUIUSDT","PEPEUSDT","LTCUSDT",
+  "SHIBUSDT","NEARUSDT","APTUSDT","UNIUSDT","ATOMUSDT"];
+
+var mercado = {};            // "BTC/USDT" -> {precio, cambio}
+var mercadoEstado = "sin consultar";   // texto que se enseña bajo el activo
+
+function aPar(sim){ return sim.replace(/USDT$/, "") + "/USDT"; }
+
+function pedirMercado(){
+  mercadoEstado = "consultando Binance…";
+  if(typeof renderActivo === "function") renderActivo();
+  var url = "https://api.binance.com/api/v3/ticker/24hr?symbols=" + encodeURIComponent(JSON.stringify(SIMBOLOS));
+  return fetch(url, {cache:"no-store"})
+    .then(function(r){
+      if(!r.ok) throw new Error("Binance respondió " + r.status);
+      return r.json();
+    })
+    .then(function(datos){
+      if(!Array.isArray(datos)) throw new Error("respuesta inesperada");
+      datos.forEach(function(d){
+        var pr = parseFloat(d.lastPrice), cb = parseFloat(d.priceChangePercent);
+        if(isFinite(pr)) mercado[aPar(d.symbol)] = {precio:pr, cambio: isFinite(cb) ? cb : null};
+      });
+      var h = new Date();
+      mercadoEstado = "binance · " + String(h.getHours()).padStart(2,"0") + ":" + String(h.getMinutes()).padStart(2,"0");
+      return true;
+    })
+    .catch(function(e){
+      mercadoEstado = "sin conexión con Binance (" + e.message + "): escribe el precio a mano";
+      return false;
+    });
+}
+
+// Lleva el precio del par elegido al estado, si Binance lo ha devuelto.
+function precioDeMercado(){
+  var m = mercado[S.activo];
+  if(m && isFinite(m.precio)){ S.precio = m.precio; return true; }
+  return false;
 }
 
 /* ================= estado inicial =================
@@ -609,6 +678,7 @@ function cargar(){
       t.sesgo = clamp(Math.round(o.sesgo||0), -2, 2);
       t.nota = typeof o.nota === "string" ? o.nota : t.nota;
       t.img = typeof o.img === "string" ? o.img : null;
+      t.activo = typeof o.activo === "string" ? o.activo : null;
       if(isFinite(o.peso)) t.peso = o.peso;
     });
     if(Array.isArray(d.niveles)) S.niveles = d.niveles
@@ -994,7 +1064,7 @@ function renderNiveles(){
     var f = document.createElement("div");
     f.className = "niv-fila";
     f.innerHTML =
-      '<input class="inp num" data-niv="p" data-i="' + i + '" inputmode="decimal" value="' + fmt(l.p) + '">' +
+      '<input class="inp num" data-niv="p" data-i="' + i + '" inputmode="decimal" value="' + fmtP(l.p) + '">' +
       '<span class="tipo-tog">' +
         '<button class="tipo-btn' + (l.t === "R" ? " on" : "") + '" data-t="R" data-i="' + i + '" title="resistencia">R</button>' +
         '<button class="tipo-btn' + (l.t === "S" ? " on" : "") + '" data-t="S" data-i="' + i + '" title="soporte">S</button>' +
@@ -1067,7 +1137,7 @@ function renderMapa(){
     var py = y(pv);
     g.appendChild(svgEl("line", {x1:pL, y1:py, x2:pR, y2:py, stroke:"#1E1E1E", "stroke-width":1}));
     var tx = svgEl("text", {x:pR+8, y:py+3, fill:"#5C5C5C", "font-size":10, "font-family":"var(--mono)"});
-    tx.textContent = paso < 1 ? nf.format(pv) : nf0.format(pv);
+    tx.textContent = fmtEje(pv);
     g.appendChild(tx);
   }
   g.appendChild(svgEl("line", {x1:pR, y1:PT-6, x2:pR, y2:H-PB+6, stroke:"#1E1E1E", "stroke-width":1}));
@@ -1078,7 +1148,7 @@ function renderMapa(){
     var py = y(l.p), col = l.t === "R" ? "#E0793C" : "#5AA9E6";
     g.appendChild(svgEl("line", {x1:pL, y1:py, x2:pR, y2:py, stroke:col, "stroke-width":1, "stroke-dasharray":"1 5", opacity:.75}));
     var t1 = svgEl("text", {x:pL+4, y:py-4, fill:col, "font-size":10, "font-family":"var(--mono)", opacity:.95});
-    t1.textContent = l.t + " " + nf0.format(l.p);
+    t1.textContent = l.t + " " + fmtEje(l.p);
     g.appendChild(t1);
     if(W > 420){
       var t2 = svgEl("text", {x:pL+4+72, y:py-4, fill:"#5C5C5C", "font-size":10, "font-family":"var(--mono)"});
@@ -1093,7 +1163,7 @@ function renderMapa(){
     g.appendChild(svgEl("line", {x1:pL, y1:yp, x2:pR, y2:yp, stroke:"#E2B144", "stroke-width":1, "stroke-dasharray":"4 3"}));
     g.appendChild(svgEl("rect", {x:pR+2, y:yp-8, width:ejeW-4, height:16, fill:"#E2B144", rx:2}));
     var tp = svgEl("text", {x:pR+6, y:yp+4, fill:"#0A0A0A", "font-size":10, "font-weight":700, "font-family":"var(--mono)"});
-    tp.textContent = nf0.format(S.precio);
+    tp.textContent = fmtEje(S.precio);
     g.appendChild(tp);
   }
 
@@ -1107,7 +1177,7 @@ function renderMapa(){
     // línea
     grupo.appendChild(svgEl("line", {x1:pL, y1:py, x2:pR, y2:py, stroke:h.hex, "stroke-width":2}));
     // chip a la derecha del área de trazado
-    var texto = h.nom + "  " + nf0.format(v);
+    var texto = h.nom + "  " + fmtEje(v);
     var ancho = texto.length * 6.2 + 12;
     var chipX = pR - 6 - ancho;
     var caja = svgEl("rect", {class:"chip-caja", x:chipX, y:py-9, width:ancho, height:18, rx:2,
@@ -1152,7 +1222,7 @@ function initArrastre(){
     var tk = tick(S.precio || p);
     setup()[activo] = mejor !== null ? mejor : Math.round(p/tk)*tk;
     var inp = el("op-" + activo);          // el campo sigue al arrastre sin repintarse entero
-    if(inp) inp.value = fmt(setup()[activo]);
+    if(inp) inp.value = fmtP(setup()[activo]);
     pintarOperacion();
     e.preventDefault();
   }
@@ -1228,42 +1298,117 @@ function renderEstrategias(){
   el("est-regimen").textContent = sc >= 40 ? "régimen: tendencia" : sc < 25 ? "régimen: rango" : "régimen: mixto";
 }
 
-/* ---- desplegable propio: el <select> nativo no se puede estilar abierto ---- */
-function renderSelectorOps(){
-  var cont = el("sel-op");
-  var act = opActiva();
+/* ---- desplegable propio ----
+   El <select> nativo no se puede estilar cuando está abierto: ese popover lo
+   pinta el sistema operativo. Uno solo, reutilizado por el activo y por las
+   operaciones guardadas. */
+function pintarSelect(id, items, valor, onPick){
+  var cont = el(id);
+  if(!cont) return;
+  var act = null;
+  for(var i = 0; i < items.length; i++) if(items[i].v === valor) act = items[i];
+  cont._items = items; cont._onPick = onPick; cont._valor = valor;
   cont.innerHTML =
-    '<button type="button" class="sel-btn" id="sel-btn" aria-haspopup="listbox" aria-expanded="false">' +
-      '<span class="txt">' + esc(etiquetaOp(act)) + '</span><span class="fl">▼</span></button>';
-  var nota = el("op-nota");
-  nota.textContent = act.nota ? "// " + act.nota : "";
-  el("btn-borrar-op").hidden = S.ops.length <= 1;
+    '<button type="button" class="sel-btn" aria-haspopup="listbox" aria-expanded="false">' +
+      '<span class="txt">' + (act ? act.btn : esc(String(valor))) + '</span><span class="fl">▼</span></button>';
 }
-
-function abrirSelector(){
-  var cont = el("sel-op");
-  if(cont.querySelector(".sel-panel")) return cerrarSelector();
+function cerrarSelects(){
+  Array.prototype.forEach.call(document.querySelectorAll(".sel-panel"), function(pn){ pn.remove(); });
+  Array.prototype.forEach.call(document.querySelectorAll(".sel-btn.abierto"), function(b){
+    b.classList.remove("abierto"); b.setAttribute("aria-expanded", "false");
+  });
+}
+function alternarSelect(cont){
+  var abierto = !!cont.querySelector(".sel-panel");
+  cerrarSelects();
+  if(abierto) return;
   var panel = document.createElement("div");
   panel.className = "sel-panel";
   panel.setAttribute("role", "listbox");
-  panel.innerHTML = S.ops.map(function(o){
-    return '<div class="sel-op' + (o.id === S.opId ? " sel-on" : "") + '" role="option" data-op="' + esc(o.id) + '"' +
-      ' aria-selected="' + (o.id === S.opId) + '">' + (o.id === S.opId ? "✓ " : "&nbsp;&nbsp;") + esc(etiquetaOp(o)) + "</div>";
+  panel.innerHTML = (cont._items || []).map(function(o){
+    var on = o.v === cont._valor;
+    return '<div class="sel-fila' + (on ? " sel-on" : "") + '" role="option" data-v="' + esc(o.v) + '"' +
+      ' aria-selected="' + on + '">' + (on ? "✓ " : "&nbsp;&nbsp;") + o.html + "</div>";
   }).join("");
   cont.appendChild(panel);
-  el("sel-btn").classList.add("abierto");
-  el("sel-btn").setAttribute("aria-expanded", "true");
-  setTimeout(function(){ document.addEventListener("mousedown", fueraSelector); }, 0);
+  var b = cont.querySelector(".sel-btn");
+  b.classList.add("abierto"); b.setAttribute("aria-expanded", "true");
 }
-function cerrarSelector(){
-  var panel = el("sel-op").querySelector(".sel-panel");
-  if(panel) panel.remove();
-  var b = el("sel-btn");
-  if(b){ b.classList.remove("abierto"); b.setAttribute("aria-expanded", "false"); }
-  document.removeEventListener("mousedown", fueraSelector);
+document.addEventListener("click", function(e){
+  var b = e.target.closest(".sel-btn");
+  if(b){ alternarSelect(b.closest(".sel")); return; }
+  var op = e.target.closest(".sel-panel [data-v]");
+  if(op){
+    var cont = op.closest(".sel");
+    var v = op.getAttribute("data-v");
+    cerrarSelects();
+    if(cont._onPick) cont._onPick(v);
+    return;
+  }
+  cerrarSelects();
+});
+document.addEventListener("keydown", function(e){ if(e.key === "Escape") cerrarSelects(); });
+
+/* ---- selector de activo ---- */
+function renderActivo(){
+  var vistos = {}, items = [];
+  SIMBOLOS.map(aPar).concat([S.activo]).forEach(function(par){
+    if(vistos[par]) return;
+    vistos[par] = 1;
+    var m = mercado[par];
+    var col = !m || m.cambio === null ? "var(--dim)" : m.cambio >= 0 ? "var(--green)" : "var(--red)";
+    var precio = m ? fmtP(m.precio) : "—";
+    var cambio = m && m.cambio !== null ? (m.cambio >= 0 ? "+" : "") + fmt(m.cambio, 2) + " %" : "";
+    items.push({
+      v: par,
+      btn: esc(par),
+      html: '<span style="display:inline-block;min-width:88px">' + esc(par) + '</span>' +
+            '<span style="color:var(--dim2)">' + precio + '</span>' +
+            '<span style="color:' + col + ';margin-left:8px">' + cambio + '</span>'
+    });
+  });
+  pintarSelect("sel-activo", items, S.activo, function(v){
+    S.activo = v;
+    if(!precioDeMercado()) mercadoEstado = "sin precio de " + v + " en Binance: escríbelo a mano";
+    guardar(); pintarTodo();
+  });
+  el("mercado-eco").textContent = "// " + mercadoEstado;
+  el("mercado-eco").style.color = /sin conexión|sin precio/.test(mercadoEstado) ? "var(--amber)" : "var(--dim)";
 }
-function fueraSelector(e){
-  if(!el("sel-op").contains(e.target)) cerrarSelector();
+
+/* ---- avisos de coherencia ----
+   La página no puede leer lo que pone dentro de un PNG. Lo que sí sabe es con
+   qué activo estaba seleccionado cuando se soltó cada captura, y si los
+   niveles que hay escritos tienen algo que ver con el precio de ahora. */
+function avisosActivo(){
+  var avisos = [];
+  var desfasadas = S.tfs.filter(function(t){ return t.img && t.activo && t.activo !== S.activo; });
+  if(desfasadas.length){
+    avisos.push("las capturas de " + desfasadas.map(function(t){ return t.label; }).join(", ") +
+      " se cargaron con " + desfasadas[0].activo + " y ahora tienes " + S.activo +
+      " seleccionado: vuelve a subirlas o cambia de activo");
+  }
+  if(S.niveles.length && isFinite(S.precio) && S.precio > 0){
+    var ps = S.niveles.map(function(l){ return l.p; });
+    var min = Math.min.apply(null, ps), max = Math.max.apply(null, ps);
+    if(S.precio > max*2 || S.precio < min/2){
+      avisos.push("el precio (" + fmtP(S.precio) + ") se sale de los niveles cargados (" +
+        fmtP(min) + " – " + fmtP(max) + "): son de otro activo o de otra época");
+    }
+  }
+  el("aviso-activo").innerHTML = avisos.map(function(a){
+    return '<div class="aviso amb">// ' + esc(a) + "</div>"; }).join("");
+}
+
+/* ---- selector de operación guardada ---- */
+function renderSelectorOps(){
+  var items = S.ops.map(function(o){
+    return {v:o.id, btn: esc(etiquetaOp(o)), html: esc(etiquetaOp(o))};
+  });
+  pintarSelect("sel-op", items, S.opId, function(v){ S.opId = v; guardar(); pintarTodo(); });
+  var act = opActiva();
+  el("op-nota").textContent = act.nota ? "// " + act.nota : "";
+  el("btn-borrar-op").hidden = S.ops.length <= 1;
 }
 
 /* ================= render: panel de operación ================= */
@@ -1271,7 +1416,7 @@ function pintarOpInputs(){
   var s = setup();
   el("op-inputs").innerHTML = TIRADORES.map(function(h){
     return '<div><label class="lbl" for="op-' + h.k + '" style="color:' + h.col + '">' + h.nom + '</label>' +
-           '<input id="op-' + h.k + '" class="inp num" data-op="' + h.k + '" inputmode="decimal" value="' + fmt(s[h.k]) + '"></div>';
+           '<input id="op-' + h.k + '" class="inp num" data-op="' + h.k + '" inputmode="decimal" value="' + fmtP(s[h.k]) + '"></div>';
   }).join("");
 }
 function pintarOperacion(){
@@ -1386,7 +1531,7 @@ function textoPlan(){
   var L = [];
   L.push("$ plan — " + S.activo + "  (" + new Date().toLocaleString("es-ES") + ")");
   L.push("");
-  L.push("  precio        " + fmt(S.precio));
+  L.push("  precio        " + fmtP(S.precio));
   L.push("  sesgo         " + (c.dir === "long" ? "LARGO" : c.dir === "short" ? "CORTO" : "SIN SESGO") +
          "  (" + (c.score > 0 ? "+" : "") + c.score + ")");
   L.push("  temporalidad  " + S.tfs.map(function(t){ return t.label + ":" + nombreSesgo(t.sesgo); }).join("  "));
@@ -1394,11 +1539,11 @@ function textoPlan(){
   L.push("  estrategia    " + opActiva().nombre +
          (opActiva().horizonte ? "  (" + opActiva().horizonte + ")" : ""));
   L.push("  dirección     " + (dirActiva() === "long" ? "largo" : "corto"));
-  L.push("  entrada       " + fmt(s.entrada));
-  L.push("  stop          " + fmt(s.stop) + "   (" + fmt(m.pctStop, 2) + " %)");
-  L.push("  objetivo 1    " + fmt(s.tp1) + "   " + (isFinite(m.rr1) ? fmt(m.rr1, 2) + " R" : "—"));
-  L.push("  objetivo 2    " + fmt(s.tp2) + "   " + (isFinite(m.rr2) ? fmt(m.rr2, 2) + " R" : "—"));
-  L.push("  objetivo 3    " + fmt(s.tp3) + "   " + (isFinite(m.rr3) ? fmt(m.rr3, 2) + " R" : "—"));
+  L.push("  entrada       " + fmtP(s.entrada));
+  L.push("  stop          " + fmtP(s.stop) + "   (" + fmt(m.pctStop, 2) + " %)");
+  L.push("  objetivo 1    " + fmtP(s.tp1) + "   " + (isFinite(m.rr1) ? fmt(m.rr1, 2) + " R" : "—"));
+  L.push("  objetivo 2    " + fmtP(s.tp2) + "   " + (isFinite(m.rr2) ? fmt(m.rr2, 2) + " R" : "—"));
+  L.push("  objetivo 3    " + fmtP(s.tp3) + "   " + (isFinite(m.rr3) ? fmt(m.rr3, 2) + " R" : "—"));
   L.push("");
   var pr = par();
   L.push("  arriesgas     " + fmt(rc.importe) + " " + pr.cotiza + "  (" + fmt(S.riesgo.pct, 2) + " % de " + fmt(S.riesgo.capital) + ")");
@@ -1421,7 +1566,9 @@ function pintarPlan(){
 
 /* ================= pintado global ================= */
 function pintarTodo(){
+  renderActivo();
   renderTFs();
+  avisosActivo();
   renderConfluencia();
   renderNiveles();
   renderEstrategias();
@@ -1433,7 +1580,7 @@ function pintarTodo(){
   pintarValidacion();
   pintarPlan();
   // No pisar el campo mientras se escribe en él.
-  if(document.activeElement !== el("i-precio")) el("i-precio").value = fmt(S.precio);
+  if(document.activeElement !== el("i-precio")) el("i-precio").value = fmtP(S.precio);
 }
 
 /* ================= imágenes ================= */
@@ -1461,6 +1608,7 @@ function meterImagen(i, file){
   escalar(file, function(dataUrl){
     if(!dataUrl) return;
     S.tfs[i].img = dataUrl;
+    S.tfs[i].activo = S.activo;    // para poder avisar si luego se cambia de par
     slotActivo = Math.min(3, i + 1);
     guardar(); renderTFs();
   });
@@ -1559,13 +1707,32 @@ function conectar(){
   });
 
   /* --- cabecera --- */
-  el("i-activo").addEventListener("input", function(){
-    S.activo = this.value; guardar(); pintarPlan(); renderConfluencia(); pintarRiesgo();
+  el("btn-otro").addEventListener("click", function(){
+    var inp = el("i-activo");
+    inp.hidden = !inp.hidden;
+    if(!inp.hidden){ inp.value = S.activo; inp.focus(); inp.select(); }
+  });
+  el("i-activo").addEventListener("change", function(){
+    var v = this.value.trim().toUpperCase();
+    if(v){
+      S.activo = v;
+      if(!precioDeMercado()) mercadoEstado = "sin precio de " + v + " en Binance: escríbelo a mano";
+    }
+    this.hidden = true;
+    guardar(); pintarTodo();
+  });
+  el("btn-refrescar").addEventListener("click", function(){
+    renderActivo();
+    pedirMercado().then(function(ok){
+      if(ok) precioDeMercado();
+      guardar(); pintarTodo();
+      eco(ok ? "precios actualizados desde Binance" : "no se pudo consultar Binance");
+    });
   });
   el("i-precio").addEventListener("change", function(){
     var v = parseNum(this.value);
     if(isFinite(v) && v > 0) S.precio = v;
-    this.value = fmt(S.precio);
+    this.value = fmtP(S.precio);
     guardar(); pintarTodo();
   });
 
@@ -1616,15 +1783,6 @@ function conectar(){
   });
 
   /* --- selector de operación guardada --- */
-  el("sel-op").addEventListener("click", function(e){
-    if(e.target.closest("#sel-btn")) return abrirSelector();
-    var o = e.target.closest("[data-op]");
-    if(o){
-      S.opId = o.getAttribute("data-op");
-      cerrarSelector();
-      guardar(); pintarTodo();
-    }
-  });
   el("btn-borrar-op").addEventListener("click", function(){
     if(S.ops.length <= 1) return;
     var i = S.ops.findIndex(function(o){ return o.id === S.opId; });
@@ -1827,8 +1985,7 @@ function cerrarLupa(){ el("lupa-velo").hidden = true; el("lupa-img").src = ""; }
 
 /* --- inputs <- estado --- */
 function sincronizarInputs(){
-  el("i-activo").value  = S.activo;
-  el("i-precio").value  = fmt(S.precio);
+  el("i-precio").value  = fmtP(S.precio);
   el("i-capital").value = fmt(S.riesgo.capital);
   el("i-riesgo").value  = fmt(S.riesgo.pct, 2);
   el("i-apal").value    = fmt(S.riesgo.apal, 0);
@@ -1849,7 +2006,22 @@ var listo = function(){
   // El SVG necesita un ancho ya medido para colocar el eje.
   requestAnimationFrame(function(){ renderMapa(); });
 };
-setTimeout(listo, reducido() ? 0 : 1450);
+
+// El precio de apertura se pide a Binance mientras corre la barra de carga,
+// así no se añade espera. Si falla, se queda el último precio guardado y la
+// página lo dice: nunca se bloquea el arranque por una petición de red.
+var pintado = false;
+function arrancar(){
+  if(pintado) return;
+  pintado = true;
+  listo();
+}
+pedirMercado().then(function(ok){
+  if(ok) precioDeMercado();
+  guardar();
+  if(pintado) pintarTodo();
+});
+setTimeout(arrancar, reducido() ? 0 : 1450);
 })();
 </script>
 </body>

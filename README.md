@@ -32,6 +32,22 @@ el margen no cabe en la cuenta o cuando el riesgo pasa del 2 %, y desglosa el
 resultado de cada escenario. La divisa y el símbolo base se leen del par:
 `BTC/USDT` da tamaño en BTC y cifras en USDT.
 
+**Activo y precio.** Un desplegable con los veinte pares en USDT de mayor
+volumen de Binance, cada uno con su precio y su variación del día. Al abrir la
+página se pide el precio del par elegido a la API pública de Binance, en una
+sola petición para los veinte. Si no hay conexión —o si la página se abre como
+artefacto de claude.ai, cuya CSP bloquea las peticiones a dominios externos— se
+conserva el último precio guardado y se avisa; el campo de precio sigue siendo
+editable a mano. Con `[otro]` se puede escribir cualquier par que no esté en la
+lista.
+
+**Avisos de coherencia.** La página no puede leer lo que pone dentro de un PNG,
+así que no adivina qué activo muestra una captura. Lo que sí hace es recordar
+con qué par estaba seleccionado cuando se soltó cada una, y avisar si luego se
+cambia de activo. Avisa también cuando el precio se sale por completo del rango
+de niveles cargados, que es la señal de que los niveles son de otro activo o de
+otra época.
+
 **Estrategias.** Cuatro botones que releen los mismos niveles de cuatro
 maneras distintas y guardan cada resultado como una operación con su hora, para
 poder saltar de una a otra en el desplegable y comparar:
