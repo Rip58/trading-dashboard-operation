@@ -1,4 +1,4 @@
-# Terminal de Confluencia
+# Dashboard Trading Operation
 
 Dashboard local para preparar una operación a partir de **cuatro capturas del
 mismo activo en distintas temporalidades**. Se cargan los gráficos, se marca el
@@ -32,6 +32,25 @@ el margen no cabe en la cuenta o cuando el riesgo pasa del 2 %, y desglosa el
 resultado de cada escenario. La divisa y el símbolo base se leen del par:
 `BTC/USDT` da tamaño en BTC y cifras en USDT.
 
+**Estrategias.** Cuatro botones que releen los mismos niveles de cuatro
+maneras distintas y guardan cada resultado como una operación con su hora, para
+poder saltar de una a otra en el desplegable y comparar:
+
+| Estrategia | Horizonte | Régimen | Qué hace |
+|---|---|---|---|
+| Ruptura de rango | swing | tendencia | Entra al superar el techo del rango y proyecta su altura. Acierta poco, pero el ganador medio es varias veces el perdedor medio. |
+| Retroceso en tendencia | swing | tendencia | Compra la corrección al primer soporte, con el stop detrás de la siguiente estructura. Es la de mayor porcentaje de aciertos. |
+| Barrido de liquidez | intradía | cualquiera | Entra en el nivel que acaba de barrer los stops, con el stop pegado bajo la mecha. R:R alto por lo ceñido del stop. |
+| Vuelta al rango | intradía | rango | Reversión a la media: opera contra el extremo buscando el centro. La dirección la marca la posición del precio, no el sesgo. |
+
+Las de swing usan solo los niveles de temporalidad alta (4H en adelante) y un
+rango de vela tres veces mayor; las de intradía usan todos. La sección marca
+cuáles encajan con el régimen de ahora mismo: con el sesgo marcado mandan las
+de tendencia, y con las temporalidades en desacuerdo mandan las de reversión.
+
+Las cifras de referencia salen de backtests publicados, no de uno propio: son
+un punto de partida razonable, no una promesa de resultados.
+
 **Validación y plan.** Nueve puntos de checklist, de los que seis se marcan
 solos a partir de los datos ya introducidos: si la temporalidad mayor acompaña,
 si hay tres a favor, si el R:R llega a 1,5, si el margen cabe. El resultado es
@@ -52,7 +71,7 @@ No hace falta instalar nada. El único script del repo genera el fragmento que
 se publica como artefacto en claude.ai:
 
 ```bash
-node scripts/build-artifact.mjs   # index.html -> dist/terminal-confluencia.part.html
+node scripts/build-artifact.mjs   # index.html -> dist/dashboard-trading-operation.part.html
 ```
 
 `index.html` es la fuente; `dist/` no se versiona.

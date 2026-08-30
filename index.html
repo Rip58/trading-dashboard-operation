@@ -11,7 +11,7 @@
 </style>
 </head>
 <body>
-<title>Terminal de Confluencia</title>
+<title>Dashboard Trading Operation</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
 <style>
 /* ------------------------------------------------------------------ *
@@ -137,6 +137,38 @@ button,input,select,textarea{font-family:var(--mono); font-size:12px}
 .tipo-btn.on[data-t="S"]{border-color:var(--blue); color:var(--blue); background:rgba(90,169,230,.12)}
 .borrar{background:none; border:1px solid var(--border); border-radius:2px; color:var(--dim); cursor:pointer; padding:4px 0; line-height:1}
 .borrar:hover{color:var(--red); border-color:var(--red)}
+
+/* ---------- estrategias ---------- */
+.rejilla-est{display:grid; grid-template-columns:repeat(4,1fr); gap:10px}
+@media (max-width:1000px){ .rejilla-est{grid-template-columns:repeat(2,1fr)} }
+@media (max-width:560px){ .rejilla-est{grid-template-columns:1fr} }
+.est{display:flex; flex-direction:column; gap:6px; text-align:left; width:100%; cursor:pointer;
+  border:1px solid var(--border); border-radius:2px; background:var(--sunk); color:inherit; padding:9px 10px}
+.est:hover{border-color:var(--dim2)}
+.est.encaja{border-color:var(--violet); background:rgba(167,139,250,.05)}
+.est.usada{border-color:var(--amber)}
+.est-cab{display:flex; align-items:center; gap:6px}
+.est-nom{font-weight:700; color:var(--white); font-size:13px}
+.est-lema{font-size:11px; color:var(--dim2); line-height:1.45}
+.est-det{font-size:10px; color:var(--dim); line-height:1.5}
+.est-pie{display:flex; align-items:center; gap:6px; font-size:10px; color:var(--dim); margin-top:auto; padding-top:4px}
+.est-rr{margin-left:auto; font-weight:700}
+
+/* ---------- barra de operación activa ---------- */
+.barra-op{display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; margin-bottom:8px}
+.op-nota{font-size:11px; color:var(--dim); min-height:16px}
+.sel{position:relative}
+.sel-btn{display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; text-align:left;
+  padding:5px 8px; border-radius:2px; border:1px solid var(--border); background:var(--sunk); color:var(--fg); cursor:pointer}
+.sel-btn:hover{border-color:var(--dim2)}
+.sel-btn.abierto{border-color:var(--amber)}
+.sel-btn .txt{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.sel-btn .fl{font-size:9px; color:var(--dim); flex-shrink:0}
+.sel-panel{position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:60; background:var(--sunk);
+  border:1px solid var(--border); border-radius:2px; max-height:240px; overflow-y:auto; box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.sel-op{padding:6px 8px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--fg)}
+.sel-op:hover{background:rgba(140,140,140,.08)}
+.sel-op.sel-on{color:var(--amber); background:rgba(226,177,68,.08)}
 
 /* ---------- mapa ---------- */
 .mapa-grid{display:grid; grid-template-columns:minmax(340px,1.35fr) minmax(300px,1fr); gap:16px; align-items:start}
@@ -283,13 +315,41 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
     </div>
   </section>
 
+  <!-- ============ 4. ESTRATEGIAS ============ -->
+  <section class="sec" id="sec-estrategias">
+    <div class="sec-cab"><span class="tri" style="color:var(--violet)">▸</span><h2>estrategias</h2>
+      <span class="der" id="est-regimen">—</span></div>
+    <div class="com">// cuatro formas de leer los mismos niveles — cada una guarda su operación con la hora</div>
+    <div class="cuerpo">
+      <div class="rejilla-est" id="rejilla-est"></div>
+      <div class="fila" style="margin-top:8px">
+        <button class="cmd" id="btn-calc-todas">[<b>calcular las cuatro</b>]</button>
+        <span style="color:var(--dim)">·</span>
+        <span style="font-size:11px;color:var(--dim)">// se marcan las que encajan con el sesgo de ahora mismo</span>
+      </div>
+    </div>
+  </section>
+
   <!-- ============ 4. MAPA ============ -->
   <section class="sec" id="sec-mapa">
     <div class="sec-cab"><span class="tri" style="color:var(--green)">▸</span><h2>mapa de operación</h2>
       <span class="der">arrastra las líneas</span></div>
     <div class="com">// entrada, stop y objetivos sobre el eje de precio real</div>
     <div class="cuerpo">
-      <div class="fila" style="margin-bottom:10px">
+      <div class="barra-op">
+        <div style="flex:1;min-width:220px">
+          <span class="lbl">operación activa</span>
+          <div class="sel" id="sel-op"></div>
+        </div>
+        <div style="width:130px">
+          <label class="lbl" for="i-atr">rango de vela</label>
+          <input id="i-atr" class="inp num" inputmode="decimal">
+        </div>
+        <button class="cmd" id="btn-atr-auto" style="align-self:flex-end;padding-bottom:7px">[<b>auto</b>]</button>
+        <button class="cmd" id="btn-borrar-op" style="align-self:flex-end;padding-bottom:7px">[<b>borrar</b>]</button>
+      </div>
+      <div id="op-nota" class="op-nota"></div>
+      <div class="fila" style="margin:10px 0">
         <button class="caja-btn verde" data-dir="long" id="btn-long">largo</button>
         <button class="caja-btn rojo" data-dir="short" id="btn-short">corto</button>
         <span style="color:var(--dim)">·</span>
@@ -485,11 +545,13 @@ function estadoBase(){
       {p:72000, t:"S", n:"origen del impulso", tf:"1D"},
       {p:64500, t:"S", n:"base de consolidación", tf:"1D"}
     ],
-    dir: "long",
-    setups: {
-      long:  {entrada:78350, stop:77900, tp1:79400, tp2:80300, tp3:81200},
-      short: {entrada:79400, stop:80350, tp1:78200, tp2:77400, tp3:76650}
-    },
+    ops: [{
+      id:"manual", nombre:"Manual", estrategia:null, horizonte:null, fecha:null,
+      dir:"long", nota:"Operación montada a mano sobre los niveles.",
+      entrada:78350, stop:77900, tp1:79400, tp2:80300, tp3:81200
+    }],
+    opId: "manual",
+    atr: null,                     // null = estimado a partir de los niveles
     riesgo: {capital:5000, pct:1, apal:5},
     check: {},
     verTodos: false
@@ -525,7 +587,7 @@ function cargar(){
     var base = estadoBase();
     S.activo  = typeof d.activo === "string" ? d.activo : base.activo;
     S.precio  = isFinite(d.precio) ? d.precio : base.precio;
-    S.dir     = d.dir === "short" ? "short" : "long";
+    if(isFinite(d.atr) && d.atr > 0) S.atr = +d.atr;
     S.verTodos = !!d.verTodos;
     if(Array.isArray(d.tfs)) S.tfs.forEach(function(t,i){
       var o = d.tfs[i]; if(!o) return;
@@ -537,11 +599,31 @@ function cargar(){
     if(Array.isArray(d.niveles)) S.niveles = d.niveles
       .filter(function(l){ return l && isFinite(l.p); })
       .map(function(l){ return {p:+l.p, t:l.t === "R" ? "R" : "S", n:String(l.n||""), tf:String(l.tf||"")}; });
-    ["long","short"].forEach(function(k){
-      if(d.setups && d.setups[k]) ["entrada","stop","tp1","tp2","tp3"].forEach(function(f){
-        if(isFinite(d.setups[k][f])) S.setups[k][f] = +d.setups[k][f];
-      });
-    });
+    if(Array.isArray(d.ops) && d.ops.length){
+      S.ops = d.ops.filter(function(o){ return o && o.id && isFinite(o.entrada); })
+        .map(function(o){
+          return {
+            id:String(o.id), nombre:String(o.nombre || "Operación"),
+            estrategia: o.estrategia ? String(o.estrategia) : null,
+            horizonte: o.horizonte ? String(o.horizonte) : null,
+            fecha: o.fecha ? String(o.fecha) : null,
+            dir: o.dir === "short" ? "short" : "long",
+            nota: String(o.nota || ""),
+            entrada:+o.entrada, stop:+o.stop, tp1:+o.tp1, tp2:+o.tp2, tp3:+o.tp3
+          };
+        });
+      if(!S.ops.length) S.ops = estadoBase().ops;
+      S.opId = S.ops.some(function(o){ return o.id === d.opId; }) ? d.opId : S.ops[0].id;
+    } else if(d.setups){
+      // Guardado de una versión anterior: traía un par largo/corto en vez de una lista.
+      var k = d.dir === "short" ? "short" : "long", v = d.setups[k];
+      if(v && isFinite(v.entrada)){
+        S.ops[0].dir = k;
+        ["entrada","stop","tp1","tp2","tp3"].forEach(function(f){
+          if(isFinite(v[f])) S.ops[0][f] = +v[f];
+        });
+      }
+    }
     if(d.riesgo){
       if(isFinite(d.riesgo.capital)) S.riesgo.capital = +d.riesgo.capital;
       if(isFinite(d.riesgo.pct))     S.riesgo.pct = +d.riesgo.pct;
@@ -568,9 +650,189 @@ function confluencia(){
   var dir = score >= 25 ? "long" : score <= -25 ? "short" : "none";
   return {score:score, dir:dir, pesoTotal:pesoTotal};
 }
-function setup(){ return S.setups[S.dir]; }
+function opActiva(){
+  for(var i = 0; i < S.ops.length; i++) if(S.ops[i].id === S.opId) return S.ops[i];
+  return S.ops[0];
+}
+function setup(){ return opActiva(); }
+function dirActiva(){ return opActiva().dir; }
+// Rango medio de vela. Se estima con la distancia entre el soporte y la
+// resistencia que rodean al precio; se puede sobrescribir a mano.
+function atrAuto(){
+  var P = S.precio;
+  var r = S.niveles.filter(function(l){ return l.p > P; }).sort(function(a,b){ return a.p - b.p; })[0];
+  var s = S.niveles.filter(function(l){ return l.p < P; }).sort(function(a,b){ return b.p - a.p; })[0];
+  if(r && s) return Math.max((r.p - s.p)/4, P*0.001);
+  return P*0.005;
+}
+function atr(){ return isFinite(S.atr) && S.atr > 0 ? S.atr : atrAuto(); }
+
+/* ================= las cuatro estrategias =================
+   Dos de tendencia (swing) y dos de reversión (intradía). Todas se calculan
+   con lo que ya hay en pantalla: precio, niveles, rango medio de vela y el
+   sesgo ponderado. Ninguna necesita datos que la página no tenga.
+
+   La elección viene de lo que mejor aguanta en cripto según los backtests
+   publicados: la ruptura de canal es la que mejor ratio riesgo/beneficio da
+   aunque acierte una de cada tres; el retroceso a favor de tendencia ronda el
+   55-65 % de aciertos con 2:1 o mejor; y la reversión gana cuando el mercado
+   se mete en rango, que es justo cuando las dos anteriores fallan. */
+
+// 4H en adelante cuenta como temporalidad alta.
+function esAlta(tf){ return /^\s*(4h|6h|8h|12h|1?d|[23]d|1?w|1?m)\s*$/i.test(String(tf || "")); }
+
+// Una estrategia de swing no debe colgarse del rango de los últimos quince
+// minutos: para swing se usan solo los niveles de temporalidad alta, y si no
+// hay suficientes a ambos lados del precio, se cae de vuelta a todos.
+function contexto(horizonte){
+  var P = S.precio, A = atr();
+  var lista = S.niveles;
+  if(horizonte === "swing"){
+    var altos = S.niveles.filter(function(l){ return esAlta(l.tf); });
+    var hayArriba = altos.some(function(l){ return l.p > P; });
+    var hayAbajo  = altos.some(function(l){ return l.p < P; });
+    if(hayArriba && hayAbajo) lista = altos;
+  }
+  var res = lista.filter(function(l){ return l.p > P; }).sort(function(a,b){ return a.p - b.p; });
+  var sop = lista.filter(function(l){ return l.p < P; }).sort(function(a,b){ return b.p - a.p; });
+  var c = confluencia();
+  return {P:P, A: horizonte === "swing" ? A*3 : A, res:res, sop:sop, score:c.score,
+          dir: c.dir === "none" ? (c.score >= 0 ? "long" : "short") : c.dir};
+}
+// n-ésimo nivel de la lista; si no existe, se proyecta a partir del último.
+function nivel(lista, i, P, paso, signo){
+  if(lista[i]) return lista[i].p;
+  var base = lista.length ? lista[lista.length-1].p : P;
+  return base + signo * paso * (i - lista.length + 1);
+}
+
+var ESTRATEGIAS = [
+  {
+    id:"ruptura", nombre:"Ruptura de rango", horizonte:"swing", regimen:"tendencia",
+    lema:"Rompe el techo del rango y proyecta su altura",
+    detalle:"Entra al superar la resistencia, con el stop de vuelta dentro del rango. Acierta poco pero cuando corre, corre.",
+    calc: function(c){
+      var dir = c.dir, A = c.A;
+      var techo = c.res[0] && c.res[0].p, suelo = c.sop[0] && c.sop[0].p;
+      if(!techo || !suelo) return null;
+      var altura = techo - suelo;
+      if(dir === "long"){
+        var e = techo + 0.25*A;
+        return {dir:"long", entrada:e, stop: techo - Math.max(1.2*A, altura*0.25),
+                tp1: e + altura*0.6, tp2: e + altura*1.0, tp3: e + altura*1.6,
+                nota:"Ruptura del techo en " + fmt(techo,0) + " con proyección de la altura del rango (" + fmt(altura,0) + ")."};
+      }
+      var e2 = suelo - 0.25*A;
+      return {dir:"short", entrada:e2, stop: suelo + Math.max(1.2*A, altura*0.25),
+              tp1: e2 - altura*0.6, tp2: e2 - altura*1.0, tp3: e2 - altura*1.6,
+              nota:"Pérdida del suelo en " + fmt(suelo,0) + " con proyección de la altura del rango (" + fmt(altura,0) + ")."};
+    }
+  },
+  {
+    id:"retroceso", nombre:"Retroceso en tendencia", horizonte:"swing", regimen:"tendencia",
+    lema:"Espera la corrección al primer nivel y sigue el tren",
+    detalle:"Entra en el retroceso al soporte más cercano, con el stop detrás de la siguiente estructura. Es la de mayor porcentaje de aciertos.",
+    calc: function(c){
+      var dir = c.dir, A = c.A, P = c.P;
+      if(dir === "long"){
+        if(!c.sop.length) return null;
+        var e = c.sop[0].p;
+        var sig = c.sop[1] ? c.sop[1].p : e - 3*A;
+        return {dir:"long", entrada:e, stop: sig - 0.5*A,
+                tp1: nivel(c.res,0,P,3*A,1), tp2: nivel(c.res,1,P,3*A,1), tp3: nivel(c.res,2,P,3*A,1),
+                nota:"Compra el retroceso a " + fmt(e,0) + ", con el stop bajo " + fmt(sig,0) + "."};
+      }
+      if(!c.res.length) return null;
+      var e2 = c.res[0].p;
+      var sig2 = c.res[1] ? c.res[1].p : e2 + 3*A;
+      return {dir:"short", entrada:e2, stop: sig2 + 0.5*A,
+              tp1: nivel(c.sop,0,P,3*A,-1), tp2: nivel(c.sop,1,P,3*A,-1), tp3: nivel(c.sop,2,P,3*A,-1),
+              nota:"Vende el rebote a " + fmt(e2,0) + ", con el stop sobre " + fmt(sig2,0) + "."};
+    }
+  },
+  {
+    id:"barrido", nombre:"Barrido de liquidez", horizonte:"intradía", regimen:"cualquiera",
+    lema:"Entra donde saltaron los stops, con el stop bajo la mecha",
+    detalle:"El precio perfora el nivel, caza los stops y lo recupera. Stop muy ceñido bajo la mecha, así que el R:R sale alto.",
+    calc: function(c){
+      var dir = c.dir, A = c.A, P = c.P;
+      if(dir === "long"){
+        if(!c.sop.length) return null;
+        var nv = c.sop[0].p, techo = nivel(c.res,0,P,3*A,1);
+        return {dir:"long", entrada:nv, stop: nv - 1.2*A,
+                tp1: (nv + techo)/2, tp2: techo, tp3: nivel(c.res,1,P,3*A,1),
+                nota:"Barrido de " + fmt(nv,0) + " y recuperación; stop " + fmt(1.2*A,0) + " bajo la mecha."};
+      }
+      if(!c.res.length) return null;
+      var nv2 = c.res[0].p, suelo = nivel(c.sop,0,P,3*A,-1);
+      return {dir:"short", entrada:nv2, stop: nv2 + 1.2*A,
+              tp1: (nv2 + suelo)/2, tp2: suelo, tp3: nivel(c.sop,1,P,3*A,-1),
+              nota:"Barrido de " + fmt(nv2,0) + " y rechazo; stop " + fmt(1.2*A,0) + " sobre la mecha."};
+    }
+  },
+  {
+    id:"rango", nombre:"Vuelta al rango", horizonte:"intradía", regimen:"rango",
+    lema:"Opera contra el extremo y busca la mitad",
+    detalle:"Reversión a la media: se entra en el extremo del rango buscando el centro. La dirección la marca dónde está el precio, no el sesgo.",
+    calc: function(c){
+      var A = c.A;
+      var suelo = c.sop[0] && c.sop[0].p, techo = c.res[0] && c.res[0].p;
+      if(!suelo || !techo || techo <= suelo) return null;
+      var alto = techo - suelo, mitad = (suelo + techo)/2;
+      var arriba = (c.P - suelo)/alto >= 0.5;   // la posición dentro del rango manda
+      if(arriba){
+        return {dir:"short", entrada: techo - 0.3*A, stop: techo + 1.0*A,
+                tp1: mitad, tp2: techo - alto*0.75, tp3: suelo + 0.3*A,
+                nota:"El precio está en la mitad alta del rango " + fmt(suelo,0) + "–" + fmt(techo,0) + ": se vende el extremo buscando la mitad."};
+      }
+      return {dir:"long", entrada: suelo + 0.3*A, stop: suelo - 1.0*A,
+              tp1: mitad, tp2: suelo + alto*0.75, tp3: techo - 0.3*A,
+              nota:"El precio está en la mitad baja del rango " + fmt(suelo,0) + "–" + fmt(techo,0) + ": se compra el extremo buscando la mitad."};
+    }
+  }
+];
+
+// Con sesgo marcado mandan las de tendencia; con las temporalidades en
+// desacuerdo, el mercado está en rango y mandan las de reversión.
+function encaja(est){
+  var sc = Math.abs(confluencia().score);
+  if(est.regimen === "tendencia") return sc >= 40;
+  if(est.regimen === "rango") return sc < 25;
+  return true;
+}
+
+function aplicarEstrategia(id){
+  var est = ESTRATEGIAS.filter(function(e){ return e.id === id; })[0];
+  if(!est) return null;
+  var r = est.calc(contexto(est.horizonte));
+  if(!r){ eco("faltan niveles a un lado del precio para calcular " + est.nombre.toLowerCase()); return null; }
+  var tk = tick(S.precio);
+  ["entrada","stop","tp1","tp2","tp3"].forEach(function(f){ r[f] = Math.round(r[f]/tk)*tk; });
+  var ahora = new Date();
+  var op = {
+    id: est.id + "-" + ahora.getTime(),
+    nombre: est.nombre,
+    estrategia: est.id,
+    horizonte: est.horizonte,
+    fecha: ahora.toISOString(),
+    dir: r.dir, nota: r.nota,
+    entrada:r.entrada, stop:r.stop, tp1:r.tp1, tp2:r.tp2, tp3:r.tp3
+  };
+  S.ops.unshift(op);
+  if(S.ops.length > 24) S.ops.length = 24;   // no dejar que la lista crezca sin fin
+  S.opId = op.id;
+  return op;
+}
+
+function etiquetaOp(o){
+  if(!o.fecha) return o.nombre;
+  var d = new Date(o.fecha);
+  var dd = String(d.getDate()).padStart(2,"0") + "/" + String(d.getMonth()+1).padStart(2,"0");
+  var hh = String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
+  return o.nombre + " · " + dd + " " + hh;
+}
 function metricas(){
-  var s = setup(), esLargo = S.dir === "long";
+  var s = setup(), esLargo = dirActiva() === "long";
   var riesgoU = esLargo ? (s.entrada - s.stop) : (s.stop - s.entrada);
   function premio(tp){ return esLargo ? (tp - s.entrada) : (s.entrada - tp); }
   return {
@@ -597,16 +859,16 @@ function riesgoCalc(){
 /* ================= checklist ================= */
 var CHECKS = [
   {id:"c1", p:3, t:"La temporalidad mayor acompaña a la dirección", auto:function(){
-      var d1 = S.tfs[0].sesgo; return S.dir === "long" ? d1 > 0 : d1 < 0; }},
+      var d1 = S.tfs[0].sesgo; return dirActiva() === "long" ? d1 > 0 : d1 < 0; }},
   {id:"c2", p:2, t:"Al menos 3 de 4 temporalidades no van en contra", auto:function(){
       var n = 0; S.tfs.forEach(function(t){
-        if(S.dir === "long" ? t.sesgo >= 0 : t.sesgo <= 0) n++; }); return n >= 3; }},
+        if(dirActiva() === "long" ? t.sesgo >= 0 : t.sesgo <= 0) n++; }); return n >= 3; }},
   {id:"c3", p:2, t:"La entrada está apoyada en un nivel, no en el aire", auto:function(){
       var e = setup().entrada; return S.niveles.some(function(l){
         return Math.abs(l.p - e) / (e||1) < 0.0025; }); }},
   {id:"c4", p:2, t:"El stop queda al otro lado de una estructura", auto:function(){
       var s = setup(); return S.niveles.some(function(l){
-        return S.dir === "long" ? (l.p >= s.stop && l.p < s.entrada) : (l.p <= s.stop && l.p > s.entrada); }); }},
+        return dirActiva() === "long" ? (l.p >= s.stop && l.p < s.entrada) : (l.p <= s.stop && l.p > s.entrada); }); }},
   {id:"c5", p:3, t:"R:R al primer objetivo ≥ 1,5", auto:function(){
       var m = metricas(); return m.valido && m.rr1 >= 1.5; }},
   {id:"c6", p:3, t:"El margen cabe en la cuenta y el riesgo no pasa del 2 %", auto:function(){
@@ -901,6 +1163,83 @@ function initArrastre(){
   });
 }
 
+/* ================= render: estrategias ================= */
+// R:R que daría cada estrategia si se aplicase ahora, sin llegar a aplicarla.
+function previaRR(est){
+  var r = est.calc(contexto(est.horizonte));
+  if(!r) return null;
+  var riesgo = r.dir === "long" ? r.entrada - r.stop : r.stop - r.entrada;
+  if(!(riesgo > 0)) return null;
+  var premio = r.dir === "long" ? r.tp1 - r.entrada : r.entrada - r.tp1;
+  return {rr: premio/riesgo, dir: r.dir};
+}
+
+function renderEstrategias(){
+  var cont = el("rejilla-est");
+  var usada = opActiva().estrategia;
+  cont.innerHTML = "";
+  ESTRATEGIAS.forEach(function(est){
+    var ok = encaja(est), pr = previaRR(est);
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "est" + (ok ? " encaja" : "") + (usada === est.id ? " usada" : "");
+    b.setAttribute("data-est", est.id);
+    var colDir = pr ? (pr.dir === "long" ? "var(--green)" : "var(--red)") : "var(--dim)";
+    b.innerHTML =
+      '<div class="est-cab"><span class="est-nom">' + esc(est.nombre) + '</span>' +
+        '<span class="badge">' + est.horizonte + '</span></div>' +
+      '<div class="est-lema">' + esc(est.lema) + '</div>' +
+      '<div class="est-det">' + esc(est.detalle) + '</div>' +
+      '<div class="est-pie">' +
+        (ok ? '<span style="color:var(--violet)">encaja ahora</span>' : '<span>fuera de su régimen</span>') +
+        '<span class="est-rr" style="color:' + colDir + '">' +
+          (pr ? (pr.dir === "long" ? "largo" : "corto") + "  " + fmt(pr.rr, 2) + " R" : "sin niveles") +
+        '</span>' +
+      '</div>';
+    cont.appendChild(b);
+  });
+  var sc = Math.abs(confluencia().score);
+  el("est-regimen").textContent = sc >= 40 ? "régimen: tendencia" : sc < 25 ? "régimen: rango" : "régimen: mixto";
+}
+
+/* ---- desplegable propio: el <select> nativo no se puede estilar abierto ---- */
+function renderSelectorOps(){
+  var cont = el("sel-op");
+  var act = opActiva();
+  cont.innerHTML =
+    '<button type="button" class="sel-btn" id="sel-btn" aria-haspopup="listbox" aria-expanded="false">' +
+      '<span class="txt">' + esc(etiquetaOp(act)) + '</span><span class="fl">▼</span></button>';
+  var nota = el("op-nota");
+  nota.textContent = act.nota ? "// " + act.nota : "";
+  el("btn-borrar-op").hidden = S.ops.length <= 1;
+}
+
+function abrirSelector(){
+  var cont = el("sel-op");
+  if(cont.querySelector(".sel-panel")) return cerrarSelector();
+  var panel = document.createElement("div");
+  panel.className = "sel-panel";
+  panel.setAttribute("role", "listbox");
+  panel.innerHTML = S.ops.map(function(o){
+    return '<div class="sel-op' + (o.id === S.opId ? " sel-on" : "") + '" role="option" data-op="' + esc(o.id) + '"' +
+      ' aria-selected="' + (o.id === S.opId) + '">' + (o.id === S.opId ? "✓ " : "&nbsp;&nbsp;") + esc(etiquetaOp(o)) + "</div>";
+  }).join("");
+  cont.appendChild(panel);
+  el("sel-btn").classList.add("abierto");
+  el("sel-btn").setAttribute("aria-expanded", "true");
+  setTimeout(function(){ document.addEventListener("mousedown", fueraSelector); }, 0);
+}
+function cerrarSelector(){
+  var panel = el("sel-op").querySelector(".sel-panel");
+  if(panel) panel.remove();
+  var b = el("sel-btn");
+  if(b){ b.classList.remove("abierto"); b.setAttribute("aria-expanded", "false"); }
+  document.removeEventListener("mousedown", fueraSelector);
+}
+function fueraSelector(e){
+  if(!el("sel-op").contains(e.target)) cerrarSelector();
+}
+
 /* ================= render: panel de operación ================= */
 function pintarOpInputs(){
   var s = setup();
@@ -932,8 +1271,8 @@ function pintarOperacion(){
   }
   av.innerHTML = msg ? '<div class="aviso' + (m.valido ? " amb" : "") + '">' + esc(msg) + "</div>" : "";
 
-  el("btn-long").classList.toggle("on", S.dir === "long");
-  el("btn-short").classList.toggle("on", S.dir === "short");
+  el("btn-long").classList.toggle("on", dirActiva() === "long");
+  el("btn-short").classList.toggle("on", dirActiva() === "short");
   el("btn-zoom").innerHTML = "[<b>" + (S.verTodos ? "encuadrar la operación" : "ver todos los niveles") + "</b>]";
 }
 
@@ -1026,7 +1365,9 @@ function textoPlan(){
          "  (" + (c.score > 0 ? "+" : "") + c.score + ")");
   L.push("  temporalidad  " + S.tfs.map(function(t){ return t.label + ":" + nombreSesgo(t.sesgo); }).join("  "));
   L.push("");
-  L.push("  dirección     " + (S.dir === "long" ? "largo" : "corto"));
+  L.push("  estrategia    " + opActiva().nombre +
+         (opActiva().horizonte ? "  (" + opActiva().horizonte + ")" : ""));
+  L.push("  dirección     " + (dirActiva() === "long" ? "largo" : "corto"));
   L.push("  entrada       " + fmt(s.entrada));
   L.push("  stop          " + fmt(s.stop) + "   (" + fmt(m.pctStop, 2) + " %)");
   L.push("  objetivo 1    " + fmt(s.tp1) + "   " + (isFinite(m.rr1) ? fmt(m.rr1, 2) + " R" : "—"));
@@ -1041,13 +1382,15 @@ function textoPlan(){
   L.push("  validación    " + sc.pct + " %  (" + sc.hecho + "/" + sc.total + ")");
   CHECKS.forEach(function(ch){ L.push("    " + (checkEstado(ch) ? "[x] " : "[ ] ") + ch.t); });
   L.push("");
+  if(opActiva().nota) L.push("  razón         " + opActiva().nota);
+  L.push("");
   L.push("  notas");
   S.tfs.forEach(function(t){ if(t.nota) L.push("    " + t.label + "  " + t.nota); });
   return L.join("\n");
 }
 function pintarPlan(){
   el("plan-txt").textContent = textoPlan();
-  el("plan-sello").textContent = S.activo + " · " + (S.dir === "long" ? "largo" : "corto");
+  el("plan-sello").textContent = S.activo + " · " + opActiva().nombre;
 }
 
 /* ================= pintado global ================= */
@@ -1055,7 +1398,10 @@ function pintarTodo(){
   renderTFs();
   renderConfluencia();
   renderNiveles();
+  renderEstrategias();
+  renderSelectorOps();
   pintarOpInputs();
+  if(document.activeElement !== el("i-atr")) el("i-atr").value = fmt(atr(), 0);
   pintarOperacion();
   pintarRiesgo();
   pintarValidacion();
@@ -1213,9 +1559,57 @@ function conectar(){
     guardar(); pintarTodo();
   });
 
+  /* --- estrategias --- */
+  el("rejilla-est").addEventListener("click", function(e){
+    var b = e.target.closest("[data-est]");
+    if(!b) return;
+    var op = aplicarEstrategia(b.getAttribute("data-est"));
+    if(op){ guardar(); pintarTodo(); eco("guardada como " + etiquetaOp(op)); }
+  });
+  el("btn-calc-todas").addEventListener("click", function(){
+    var n = 0, ultima = null;
+    ESTRATEGIAS.forEach(function(est){
+      var op = aplicarEstrategia(est.id);
+      if(op){ n++; ultima = op; }
+    });
+    if(n){
+      // Deja activa la primera de la lista, que es la última calculada.
+      guardar(); pintarTodo();
+      eco(n + " estrategias guardadas; salta entre ellas en el desplegable");
+    }
+  });
+
+  /* --- selector de operación guardada --- */
+  el("sel-op").addEventListener("click", function(e){
+    if(e.target.closest("#sel-btn")) return abrirSelector();
+    var o = e.target.closest("[data-op]");
+    if(o){
+      S.opId = o.getAttribute("data-op");
+      cerrarSelector();
+      guardar(); pintarTodo();
+    }
+  });
+  el("btn-borrar-op").addEventListener("click", function(){
+    if(S.ops.length <= 1) return;
+    var i = S.ops.findIndex(function(o){ return o.id === S.opId; });
+    var fuera = S.ops.splice(i < 0 ? 0 : i, 1)[0];
+    S.opId = S.ops[Math.min(i, S.ops.length - 1)].id;
+    guardar(); pintarTodo();
+    eco("borrada " + etiquetaOp(fuera));
+  });
+  el("i-atr").addEventListener("change", function(){
+    var v = parseNum(this.value);
+    S.atr = isFinite(v) && v > 0 ? v : null;
+    guardar(); pintarTodo();
+  });
+  el("btn-atr-auto").addEventListener("click", function(){
+    S.atr = null; guardar(); pintarTodo();
+    eco("rango de vela estimado desde los niveles");
+  });
+
   /* --- operación --- */
-  el("btn-long").addEventListener("click", function(){ S.dir = "long"; guardar(); pintarTodo(); });
-  el("btn-short").addEventListener("click", function(){ S.dir = "short"; guardar(); pintarTodo(); });
+  el("btn-long").addEventListener("click", function(){ cambiarDir("long"); });
+  el("btn-short").addEventListener("click", function(){ cambiarDir("short"); });
   el("btn-zoom").addEventListener("click", function(){ S.verTodos = !S.verTodos; guardar(); pintarOperacion(); });
   el("btn-sugerir").addEventListener("click", function(){ sugerir(); guardar(); pintarTodo(); });
   el("op-inputs").addEventListener("change", function(e){
@@ -1263,6 +1657,7 @@ function conectar(){
   var destinos = [
     {id:"sec-evidencia", l:"evidencia", c:"var(--violet)"},
     {id:"sec-confluencia", l:"confluencia", c:"var(--amber)"},
+    {id:"sec-estrategias", l:"estrategias", c:"var(--violet)"},
     {id:"sec-mapa", l:"mapa", c:"var(--green)"},
     {id:"sec-riesgo", l:"riesgo", c:"var(--orange)"},
     {id:"sec-plan", l:"plan", c:"var(--white)"}
@@ -1320,13 +1715,30 @@ function copiaFallback(txt){
   eco(ok ? "copiado" : "no se pudo copiar: selecciona el texto a mano");
 }
 
+/* --- cambio de dirección ---
+   Girar un largo en corto dejaría el stop del lado que no toca. En vez de
+   dejar la operación rota, se refleja sobre la entrada: mismo recorrido al
+   stop y a cada objetivo, así que el R:R se conserva exacto. */
+function cambiarDir(dir){
+  var o = opActiva();
+  if(o.dir === dir) return;
+  o.dir = dir;
+  var m = metricas();
+  if(!m.valido){
+    var e = o.entrada;
+    ["stop","tp1","tp2","tp3"].forEach(function(f){ o[f] = e + (e - o[f]); });
+    o.nota = "Reflejada sobre la entrada al girar a " + (dir === "long" ? "largo" : "corto") + ".";
+  }
+  guardar(); pintarTodo();
+}
+
 /* --- sugerencia automática desde los niveles --- */
 function sugerir(){
   var p = S.precio;
   var res = S.niveles.filter(function(l){ return l.t === "R"; }).sort(function(a,b){ return a.p - b.p; });
   var sop = S.niveles.filter(function(l){ return l.t === "S"; }).sort(function(a,b){ return b.p - a.p; });
   var s = setup();
-  if(S.dir === "long"){
+  if(dirActiva() === "long"){
     var apoyo = sop.filter(function(l){ return l.p <= p; });
     var arriba = res.filter(function(l){ return l.p > p; });
     if(apoyo.length){
