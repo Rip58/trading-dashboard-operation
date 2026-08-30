@@ -89,28 +89,38 @@ button,input,select,textarea{font-family:var(--mono); font-size:12px}
 .ver-chip{display:inline-flex; align-items:center; gap:6px; font-size:14px; font-weight:700; padding:4px 8px; border-radius:2px; border:1px solid currentColor}
 
 /* ---------- capturas ---------- */
+/* Las cuatro capturas van siempre en la misma fila, pequeñas: la gracia es
+   compararlas de un vistazo. Para verlas de verdad se toca y se abre la lupa. */
 .rejilla-tf{display:grid; grid-template-columns:repeat(4,1fr); gap:10px}
-@media (max-width:900px){ .rejilla-tf{grid-template-columns:repeat(2,1fr)} }
-@media (max-width:480px){ .rejilla-tf{grid-template-columns:1fr} }
-.tf-card{border:1px solid var(--border); border-radius:2px; background:var(--sunk); display:flex; flex-direction:column}
+@media (max-width:700px){ .rejilla-tf{gap:5px} }
+@media (max-width:420px){ .rejilla-tf{gap:4px} }
+.tf-card{border:1px solid var(--border); border-radius:2px; background:var(--sunk); display:flex; flex-direction:column; min-width:0}
 .tf-card.activa{border-color:var(--violet)}
-.tf-cab{display:flex; align-items:center; gap:6px; padding:7px 8px; border-bottom:1px solid var(--border)}
-.tf-cab .tf-nom{font-weight:700; color:var(--white); font-size:13px}
-.tf-cab .tf-peso{margin-left:auto; font-size:10px; color:var(--dim)}
+.tf-cab{display:flex; align-items:baseline; gap:4px; padding:5px 6px; border-bottom:1px solid var(--border)}
+.tf-cab .tf-nom{font-weight:700; color:var(--white); font-size:12px}
+.tf-cab .tf-peso{margin-left:auto; font-size:9px; color:var(--dim)}
 .zona{position:relative; aspect-ratio:9/16; background:var(--bg); border:none; width:100%; padding:0; cursor:pointer; overflow:hidden; display:block}
 .zona img{width:100%; height:100%; object-fit:cover; object-position:top center; display:block}
 .zona .vacia{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; color:var(--dim); padding:10px; text-align:center}
 .zona.drag{background:rgba(167,139,250,.06); box-shadow:inset 0 0 0 1px var(--violet)}
-.zona .lupa{position:absolute; right:5px; bottom:5px; background:rgba(10,10,10,.8); border:1px solid var(--border); border-radius:2px; padding:1px 4px; font-size:9px; color:var(--dim2)}
-.tf-pie{padding:7px 8px; display:flex; flex-direction:column; gap:6px}
+.zona .lupa{position:absolute; right:3px; bottom:3px; display:flex; padding:2px; border-radius:2px;
+  background:rgba(10,10,10,.72); border:1px solid var(--border); line-height:0}
+.zona:hover .lupa{border-color:var(--amber)}
+.tf-pie{padding:5px; display:flex; flex-direction:column; gap:5px}
 .sesgo-grupo{display:grid; grid-template-columns:repeat(5,1fr); gap:2px}
-.sesgo-btn{padding:5px 0; border-radius:2px; border:1px solid var(--border); background:var(--sunk); color:var(--dim); cursor:pointer; font-size:11px; font-weight:700; line-height:1}
+@media (max-width:700px){ .sesgo-grupo{gap:1px} }
+.sesgo-btn{padding:5px 0; border-radius:2px; border:1px solid var(--border); background:var(--sunk); color:var(--dim); cursor:pointer; font-size:10px; font-weight:700; line-height:1; min-width:0; overflow:hidden}
+@media (max-width:700px){ .sesgo-btn{font-size:9px; padding:5px 0} }
 .sesgo-btn:hover{color:var(--fg)}
 .sesgo-btn.on[data-s="-2"],.sesgo-btn.on[data-s="-1"]{border-color:var(--red); color:var(--red); background:rgba(232,83,110,.12)}
 .sesgo-btn.on[data-s="0"]{border-color:var(--dim2); color:var(--dim2); background:rgba(140,140,140,.10)}
 .sesgo-btn.on[data-s="1"],.sesgo-btn.on[data-s="2"]{border-color:var(--green); color:var(--green); background:rgba(78,204,163,.12)}
-.tf-nota{width:100%; resize:vertical; min-height:38px; padding:4px 6px; border-radius:2px; border:1px solid var(--border); background:var(--bg); color:var(--dim2); font-size:11px; outline:none; line-height:1.45}
+.tf-nota{width:100%; resize:vertical; min-height:44px; padding:5px 7px; border-radius:2px; border:1px solid var(--border); background:var(--sunk); color:var(--dim2); font-size:11px; outline:none; line-height:1.45}
 .tf-nota:focus{border-color:var(--amber); color:var(--fg)}
+.nota-activa{margin-top:8px}
+.nota-cab{display:flex; align-items:baseline; gap:6px; margin-bottom:3px; flex-wrap:wrap}
+@media (max-width:620px){ .nota-cab .pista{flex-basis:100%} }
+.zona .marca-img{position:absolute; left:4px; top:4px; font-size:9px; color:var(--dim2); background:rgba(10,10,10,.75); border-radius:2px; padding:0 3px}
 
 /* ---------- confluencia ---------- */
 .conf-grid{display:grid; grid-template-columns:minmax(280px,1fr) minmax(280px,1fr); gap:16px}
@@ -212,8 +222,8 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
 /* ---------- lupa a pantalla completa ---------- */
 #lupa-velo{position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.45); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);
   display:flex; align-items:center; justify-content:center; padding:16px}
-#lupa-velo .marco{background:var(--bg); border:1px solid var(--border); border-radius:2px; padding:10px; max-width:min(560px,92vw); max-height:92dvh; display:flex; flex-direction:column; gap:8px; box-shadow:0 12px 40px rgba(0,0,0,.5)}
-#lupa-velo img{max-width:100%; max-height:78dvh; object-fit:contain; display:block; border:1px solid var(--border)}
+#lupa-velo .marco{background:var(--bg); border:1px solid var(--border); border-radius:2px; padding:8px; max-width:96vw; max-height:96dvh; display:flex; flex-direction:column; gap:6px; box-shadow:0 12px 40px rgba(0,0,0,.5)}
+#lupa-velo img{max-width:100%; max-height:84dvh; width:auto; object-fit:contain; display:block; margin:0 auto; border:1px solid var(--border)}
 
 /* ---------- pie fijo de navegación ---------- */
 .pie{position:fixed; left:0; right:0; bottom:0; z-index:900; background:var(--bg); border-top:1px solid var(--border);
@@ -266,6 +276,7 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
     <div class="com">// suelta, pega (ctrl+v) o haz clic en cada hueco — de mayor a menor temporalidad</div>
     <div class="cuerpo">
       <div class="rejilla-tf" id="rejilla-tf"></div>
+      <div class="nota-activa" id="nota-activa"></div>
       <div class="fila" style="margin-top:8px">
         <button class="cmd" id="btn-limpiar-img">[<b>quitar todas</b>]</button>
         <span style="color:var(--dim);font-size:11px">// las capturas se guardan en este navegador, no salen de aquí</span>
@@ -453,7 +464,11 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
   <div class="marco">
     <div class="fila" style="justify-content:space-between">
       <span style="color:var(--white);font-weight:700" id="lupa-tf">—</span>
-      <button class="cmd" id="lupa-cerrar">[<b>cerrar</b>]</button>
+      <span class="fila" style="gap:10px">
+        <button class="cmd" id="lupa-ant">[<b>‹ anterior</b>]</button>
+        <button class="cmd" id="lupa-sig">[<b>siguiente ›</b>]</button>
+        <button class="cmd" id="lupa-cerrar">[<b>cerrar</b>]</button>
+      </span>
     </div>
     <img id="lupa-img" alt="">
   </div>
@@ -885,6 +900,11 @@ function checkScore(){
 }
 
 /* ================= render: capturas ================= */
+var ICONO_LUPA =
+  '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
+  '<circle cx="10.5" cy="10.5" r="6.5" stroke="#E2B144" stroke-width="2"/>' +
+  '<path d="M15.5 15.5L21 21" stroke="#E2B144" stroke-width="2" stroke-linecap="round"/></svg>';
+
 function renderTFs(){
   var cont = el("rejilla-tf");
   cont.innerHTML = "";
@@ -895,27 +915,33 @@ function renderTFs(){
     card.className = "tf-card" + (i === slotActivo ? " activa" : "");
     var botones = SESGOS.map(function(o){
       return '<button class="sesgo-btn' + (t.sesgo === o.v ? " on" : "") + '" data-s="' + o.v + '" data-i="' + i +
-             '" title="' + o.n + '" aria-label="' + t.label + ": " + o.n + '">' + o.c + "</button>";
+             '" title="' + o.n + '" aria-label="' + esc(t.label) + ": " + o.n + '">' + o.c + "</button>";
     }).join("");
     card.innerHTML =
       '<div class="tf-cab"><span class="tf-nom">' + esc(t.label) + '</span>' +
-        '<span class="badge">' + nombreSesgo(t.sesgo) + '</span>' +
-        '<span class="tf-peso">peso ' + t.peso + '%</span></div>' +
-      '<button class="zona" data-i="' + i + '" aria-label="Captura de ' + esc(t.label) + '">' +
+        '<span class="tf-peso">' + t.peso + '%</span></div>' +
+      '<button class="zona" data-i="' + i + '" aria-label="' +
+          (t.img ? "Ampliar la captura de " : "Añadir la captura de ") + esc(t.label) + '">' +
         (t.img
-          ? '<img src="' + t.img + '" alt="Gráfico de ' + esc(t.label) + '"><span class="lupa">ampliar</span>'
-          : '<span class="vacia"><span style="font-size:20px;color:var(--dim)">+</span>' +
-            '<span style="font-size:11px">suelta la captura<br>de ' + esc(t.label) + '</span>' +
-            '<span style="font-size:10px;color:var(--dim)">clic · ctrl+v</span></span>') +
+          ? '<img src="' + t.img + '" alt="Gráfico de ' + esc(t.label) + '"><span class="lupa">' + ICONO_LUPA + '</span>'
+          : '<span class="vacia"><span style="font-size:18px;color:var(--dim)">+</span>' +
+            '<span style="font-size:10px;line-height:1.4">añadir<br>' + esc(t.label) + '</span></span>') +
       '</button>' +
       '<div class="tf-pie">' +
         '<div class="sesgo-grupo" role="group" aria-label="Sesgo de ' + esc(t.label) + '">' + botones + '</div>' +
-        '<textarea class="tf-nota" data-i="' + i + '" rows="2" placeholder="// qué ves aquí">' + esc(t.nota) + '</textarea>' +
-        (t.img ? '<button class="cmd" data-quitar="' + i + '" style="align-self:flex-start">[<b>quitar</b>]</button>' : "") +
       "</div>";
     cont.appendChild(card);
   });
   el("cuenta-img").textContent = n + "/4 capturas";
+
+  // La nota no cabe dentro de una columna de 85px: va debajo, y es la de la
+  // temporalidad seleccionada.
+  var a = S.tfs[slotActivo];
+  el("nota-activa").innerHTML =
+    '<div class="nota-cab"><span class="lbl" style="margin:0">nota de ' + esc(a.label) + '</span>' +
+      '<span class="pista" style="font-size:10px;color:var(--dim)">// toca otra captura para cambiar de temporalidad</span></div>' +
+    '<textarea class="tf-nota" id="tf-nota" rows="2" placeholder="// qué ves en ' + esc(a.label) + '">' + esc(a.nota) + '</textarea>' +
+    (a.img ? '<div class="fila" style="margin-top:5px"><button class="cmd" data-quitar="' + slotActivo + '">[<b>quitar la captura de ' + esc(a.label) + '</b>]</button></div>' : "");
 }
 
 /* ================= render: confluencia ================= */
@@ -1471,9 +1497,12 @@ function conectar(){
       guardar(); renderTFs(); return;
     }
   });
-  rej.addEventListener("input", function(e){
-    var n = e.target.closest(".tf-nota");
-    if(n){ S.tfs[+n.getAttribute("data-i")].nota = n.value; guardar(); pintarPlan(); }
+  el("nota-activa").addEventListener("input", function(e){
+    if(e.target.id === "tf-nota"){ S.tfs[slotActivo].nota = e.target.value; guardar(); pintarPlan(); }
+  });
+  el("nota-activa").addEventListener("click", function(e){
+    var q = e.target.closest("[data-quitar]");
+    if(q){ S.tfs[+q.getAttribute("data-quitar")].img = null; guardar(); renderTFs(); }
   });
   ["dragenter","dragover"].forEach(function(ev){
     rej.addEventListener(ev, function(e){
@@ -1519,8 +1548,15 @@ function conectar(){
 
   /* --- lupa --- */
   el("lupa-cerrar").addEventListener("click", cerrarLupa);
+  el("lupa-ant").addEventListener("click", function(){ saltarLupa(-1); });
+  el("lupa-sig").addEventListener("click", function(){ saltarLupa(1); });
   el("lupa-velo").addEventListener("click", function(e){ if(e.target === el("lupa-velo")) cerrarLupa(); });
-  document.addEventListener("keydown", function(e){ if(e.key === "Escape") cerrarLupa(); });
+  document.addEventListener("keydown", function(e){
+    if(el("lupa-velo").hidden) return;
+    if(e.key === "Escape") cerrarLupa();
+    else if(e.key === "ArrowLeft") saltarLupa(-1);
+    else if(e.key === "ArrowRight") saltarLupa(1);
+  });
 
   /* --- cabecera --- */
   el("i-activo").addEventListener("input", function(){
@@ -1763,13 +1799,29 @@ function sugerir(){
 }
 
 /* --- lupa --- */
+var lupaIdx = 0;
 function abrirLupa(i){
   var t = S.tfs[i];
   if(!t.img) return;
+  lupaIdx = i;
   el("lupa-img").src = t.img;
   el("lupa-img").alt = "Gráfico de " + t.label;
   el("lupa-tf").textContent = S.activo + "  ·  " + t.label;
+  var conFoto = S.tfs.filter(function(x){ return x.img; }).length;
+  el("lupa-ant").hidden = el("lupa-sig").hidden = conFoto < 2;
   el("lupa-velo").hidden = false;
+}
+// Salta a la siguiente temporalidad que tenga captura, dando la vuelta.
+function saltarLupa(paso){
+  for(var k = 1; k <= S.tfs.length; k++){
+    var j = (lupaIdx + paso*k + S.tfs.length*4) % S.tfs.length;
+    if(S.tfs[j].img){
+      slotActivo = j;
+      abrirLupa(j);
+      renderTFs();
+      return;
+    }
+  }
 }
 function cerrarLupa(){ el("lupa-velo").hidden = true; el("lupa-img").src = ""; }
 
