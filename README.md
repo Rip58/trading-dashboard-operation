@@ -44,8 +44,9 @@ página se pide el precio del par elegido a la API pública de Binance, en una
 sola petición para los veinte. Si no hay conexión —o si la página se abre como
 artefacto de claude.ai, cuya CSP bloquea las peticiones a dominios externos— se
 conserva el último precio guardado y se avisa; el campo de precio sigue siendo
-editable a mano. Con `[otro]` se puede escribir cualquier par que no esté en la
-lista.
+editable a mano. La última opción del desplegable, `otro par…`, abre un campo para escribir
+cualquier par que no esté en la lista —un futuro, un cruce raro—; de ese no
+habrá precio automático y se escribe a mano.
 
 **Avisos de coherencia.** La página no puede leer lo que pone dentro de un PNG,
 así que no adivina qué activo muestra una captura. Lo que sí hace es recordar

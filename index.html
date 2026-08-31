@@ -86,12 +86,26 @@ button,input,select,textarea{font-family:var(--mono); font-size:12px}
 @media (max-width:560px){ .barra-sup .der-sup{margin-left:0; flex-basis:100%} }
 
 /* ---------- cabecera / ticker ---------- */
-.ticker{margin-top:14px; border:1px solid var(--border); border-radius:2px; background:var(--sunk); padding:10px 12px;
-  display:grid; grid-template-columns:minmax(140px,1.1fr) minmax(140px,1fr) minmax(220px,1.4fr); gap:12px; align-items:center}
-@media (max-width:760px){ .ticker{grid-template-columns:1fr 1fr} .ticker .veredicto{grid-column:1/-1} }
+/* Rejilla explícita: las tres etiquetas comparten fila, los tres controles
+   comparten fila y el pie de cada columna comparte fila. Así los títulos
+   quedan a la misma altura pase lo que pase con el contenido de cada uno. */
+.ticker{margin-top:14px; border:1px solid var(--border); border-radius:2px; background:var(--sunk);
+  padding:10px 12px; display:grid; column-gap:14px; row-gap:3px;
+  grid-template-columns:minmax(150px,1fr) minmax(150px,1fr) minmax(190px,1.2fr);
+  grid-template-areas:"e1 e2 e3" "c1 c2 c3" "p1 p1 p3"; align-items:start}
+.tk-e1{grid-area:e1} .tk-e2{grid-area:e2} .tk-e3{grid-area:e3}
+.tk-c1{grid-area:c1} .tk-c2{grid-area:c2} .tk-c3{grid-area:c3}
+.tk-p1{grid-area:p1; display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-top:5px}
+.tk-p3{grid-area:p3; margin-top:5px}
+.tk-p1 #mercado-eco, .tk-p3{font-size:10px; color:var(--dim); line-height:1.5}
+.ticker .lbl{margin-bottom:0; align-self:end}
+@media (max-width:820px){
+  .ticker{grid-template-columns:1fr 1fr;
+    grid-template-areas:"e1 e2" "c1 c2" "p1 p1" "e3 e3" "c3 c3" "p3 p3"}
+  .tk-e3{margin-top:10px; padding-top:10px; border-top:1px solid var(--border)}
+  .tk-e3::before{content:""; display:block}
+}
 .precio-grande{font-size:22px; font-weight:700; color:var(--white); letter-spacing:-.5px; padding:4px 8px}
-.veredicto{border-left:1px solid var(--border); padding-left:12px}
-@media (max-width:760px){ .veredicto{border-left:none; border-top:1px solid var(--border); padding:10px 0 0} }
 .ver-chip{display:inline-flex; align-items:center; gap:6px; font-size:14px; font-weight:700; padding:4px 8px; border-radius:2px; border:1px solid currentColor}
 
 /* ---------- capturas ---------- */
@@ -317,25 +331,27 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
   </div>
 
   <div class="ticker">
-    <div>
-      <span class="lbl">activo</span>
+    <span class="lbl tk-e1">activo</span>
+    <span class="lbl tk-e2">precio actual</span>
+    <span class="lbl tk-e3" id="lbl-sesgo">sesgo ponderado</span>
+
+    <div class="tk-c1">
       <div class="sel" id="sel-activo"></div>
-      <input id="i-activo" class="inp" hidden autocomplete="off" spellcheck="false" aria-label="Escribe otro par">
-      <div class="fila" style="gap:8px;margin-top:4px">
-        <button class="cmd" id="btn-otro">[<b>otro</b>]</button>
-        <button class="cmd" id="btn-refrescar">[<b>actualizar</b>]</button>
-      </div>
-      <div id="mercado-eco" style="font-size:10px;color:var(--dim);margin-top:3px">—</div>
+      <input id="i-activo" class="inp" hidden autocomplete="off" spellcheck="false"
+             placeholder="p. ej. NQ/USD" aria-label="Escribe otro par">
     </div>
-    <div>
-      <label class="lbl" for="i-precio">precio actual</label>
+    <div class="tk-c2">
       <input id="i-precio" class="inp num precio-grande" inputmode="decimal" autocomplete="off">
     </div>
-    <div class="veredicto" id="caja-veredicto">
-      <div class="lbl">sesgo ponderado</div>
+    <div class="tk-c3" id="caja-veredicto">
       <div id="ver-chip" class="ver-chip">—</div>
-      <div id="ver-nota" style="font-size:11px;color:var(--dim);margin-top:5px">—</div>
     </div>
+
+    <div class="tk-p1">
+      <button class="cmd" id="btn-refrescar">[<b>actualizar</b>]</button>
+      <span id="mercado-eco">—</span>
+    </div>
+    <div class="tk-p3" id="ver-nota">—</div>
   </div>
 
   <!-- ============ 1. EVIDENCIA ============ -->
@@ -1468,7 +1484,17 @@ function renderActivo(){
             '<span style="color:' + col + ';margin-left:8px">' + cambio + '</span>'
     });
   });
+  // Última opción: escribir un par que no esté en la lista (un futuro, un
+  // cruce raro). No merecía un botón propio al lado del desplegable.
+  items.push({v:"__otro", btn: esc(S.activo),
+              html:'<span style="color:var(--violet)">otro par…</span>'});
   pintarSelect("sel-activo", items, S.activo, function(v){
+    if(v === "__otro"){
+      var inp = el("i-activo");
+      inp.hidden = false; inp.value = S.activo;
+      inp.focus(); inp.select();
+      return;
+    }
     S.activo = v;
     if(!precioDeMercado()) mercadoEstado = "sin precio de " + v + " en Binance: escríbelo a mano";
     guardar(); pintarTodo();
@@ -1671,7 +1697,9 @@ function pintarPlan(){
 function pintarVista(){
   var conCapturas = S.tfs.filter(function(t){ return t.img; }).length;
   el("analisis").hidden = vista !== "analisis";
-  el("caja-veredicto").hidden = vista !== "analisis";
+  ["caja-veredicto","lbl-sesgo","ver-nota"].forEach(function(id){
+    el(id).hidden = vista !== "analisis";
+  });
   el("btn-ultimo").hidden = !(vista === "inicio" && conCapturas > 0);
   el("btn-ultimo").innerHTML = "[<b>ver el último análisis (" + conCapturas + "/4)</b>]";
   el("eco-sup").textContent = vista === "inicio"
@@ -1832,10 +1860,8 @@ function conectar(){
   });
 
   /* --- cabecera --- */
-  el("btn-otro").addEventListener("click", function(){
-    var inp = el("i-activo");
-    inp.hidden = !inp.hidden;
-    if(!inp.hidden){ inp.value = S.activo; inp.focus(); inp.select(); }
+  el("i-activo").addEventListener("keydown", function(e){
+    if(e.key === "Escape"){ this.hidden = true; }
   });
   el("i-activo").addEventListener("change", function(){
     var v = this.value.trim().toUpperCase();
