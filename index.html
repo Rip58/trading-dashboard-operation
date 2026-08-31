@@ -79,6 +79,12 @@ button,input,select,textarea{font-family:var(--mono); font-size:12px}
 .badge{display:inline-block; font-size:9px; padding:1px 4px; border-radius:2px; border:1px solid var(--border); color:var(--dim2); letter-spacing:.3px}
 .sep{height:1px; background:var(--border); margin:10px 0}
 
+/* ---------- barra superior de acciones ---------- */
+.barra-sup{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:12px;
+  padding-bottom:10px; border-bottom:1px solid var(--border)}
+.barra-sup .der-sup{margin-left:auto; font-size:11px; color:var(--dim)}
+@media (max-width:560px){ .barra-sup .der-sup{margin-left:0; flex-basis:100%} }
+
 /* ---------- cabecera / ticker ---------- */
 .ticker{margin-top:14px; border:1px solid var(--border); border-radius:2px; background:var(--sunk); padding:10px 12px;
   display:grid; grid-template-columns:minmax(140px,1.1fr) minmax(140px,1fr) minmax(220px,1.4fr); gap:12px; align-items:center}
@@ -99,7 +105,10 @@ button,input,select,textarea{font-family:var(--mono); font-size:12px}
 .tf-cab{display:flex; align-items:baseline; gap:4px; padding:5px 6px; border-bottom:1px solid var(--border)}
 .tf-cab .tf-nom{font-weight:700; color:var(--white); font-size:12px}
 .tf-cab .tf-peso{margin-left:auto; font-size:9px; color:var(--dim)}
-.zona{position:relative; aspect-ratio:9/16; background:var(--bg); border:none; width:100%; padding:0; cursor:pointer; overflow:hidden; display:block}
+/* Proporción de captura de móvil, pero con techo: en escritorio una columna
+   de 280px daría 490px de alto y la tira se comería la pantalla. */
+.zona{position:relative; aspect-ratio:9/16; max-height:min(42vh,300px); background:var(--bg);
+  border:none; width:100%; padding:0; cursor:pointer; overflow:hidden; display:block}
 .zona img{width:100%; height:100%; object-fit:cover; object-position:top center; display:block}
 .zona .vacia{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; color:var(--dim); padding:10px; text-align:center}
 .zona.drag{background:rgba(167,139,250,.06); box-shadow:inset 0 0 0 1px var(--violet)}
@@ -140,6 +149,18 @@ button,input,select,textarea{font-family:var(--mono); font-size:12px}
 /* ---------- niveles ---------- */
 .tabla{width:100%; overflow-x:auto}
 .niv-fila{display:grid; grid-template-columns:106px 62px 1fr 56px 26px; gap:6px; align-items:center; margin-bottom:4px; min-width:420px}
+/* Por debajo de 620px el min-width escondía la temporalidad y la papelera
+   fuera de la pantalla, sin indicio de que hubiese scroll lateral. */
+@media (max-width:620px){
+  .niv-fila{grid-template-columns:1fr 62px 34px; min-width:0; gap:5px; margin-bottom:8px;
+    grid-template-areas:"precio tipo borrar" "etiqueta etiqueta tf"}
+  .niv-fila > :nth-child(1){grid-area:precio}
+  .niv-fila > :nth-child(2){grid-area:tipo}
+  .niv-fila > :nth-child(3){grid-area:etiqueta}
+  .niv-fila > :nth-child(4){grid-area:tf}
+  .niv-fila > :nth-child(5){grid-area:borrar}
+  .niv-cab{display:none}
+}
 .niv-cab{font-size:10px; text-transform:uppercase; letter-spacing:.3px; color:var(--dim); margin-bottom:4px}
 .tipo-tog{display:grid; grid-template-columns:1fr 1fr; gap:2px}
 .tipo-btn{padding:4px 0; border-radius:2px; border:1px solid var(--border); background:var(--sunk); color:var(--dim); cursor:pointer; font-size:11px; font-weight:700}
@@ -148,21 +169,28 @@ button,input,select,textarea{font-family:var(--mono); font-size:12px}
 .borrar{background:none; border:1px solid var(--border); border-radius:2px; color:var(--dim); cursor:pointer; padding:4px 0; line-height:1}
 .borrar:hover{color:var(--red); border-color:var(--red)}
 
-/* ---------- estrategias ---------- */
-.rejilla-est{display:grid; grid-template-columns:repeat(4,1fr); gap:10px}
-@media (max-width:1000px){ .rejilla-est{grid-template-columns:repeat(2,1fr)} }
-@media (max-width:560px){ .rejilla-est{grid-template-columns:1fr} }
-.est{display:flex; flex-direction:column; gap:6px; text-align:left; width:100%; cursor:pointer;
-  border:1px solid var(--border); border-radius:2px; background:var(--sunk); color:inherit; padding:9px 10px}
-.est:hover{border-color:var(--dim2)}
-.est.encaja{border-color:var(--violet); background:rgba(167,139,250,.05)}
-.est.usada{border-color:var(--amber)}
-.est-cab{display:flex; align-items:center; gap:6px}
-.est-nom{font-weight:700; color:var(--white); font-size:13px}
+/* ---------- estrategias ----------
+   Cuatro columnas en pantalla ancha. En el móvil llevan demasiado texto para
+   caber en cuatro, así que se apilan: aquí manda la legibilidad. */
+.rejilla-est{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; align-items:start}
+@media (max-width:1100px){ .rejilla-est{grid-template-columns:repeat(2,1fr)} }
+@media (max-width:680px){ .rejilla-est{grid-template-columns:1fr} }
+.est{display:flex; flex-direction:column; gap:5px; border:1px solid var(--border); border-radius:2px;
+  background:var(--sunk); padding:10px; height:100%}
+.est.ok{border-color:var(--green)}
+.est.usada{border-color:var(--amber); background:rgba(226,177,68,.05)}
+.est-nom{margin:0; font-size:14px; font-weight:700; color:var(--white); line-height:1.3}
+.est-cab{display:flex; gap:5px; flex-wrap:wrap}
 .est-lema{font-size:11px; color:var(--dim2); line-height:1.45}
-.est-det{font-size:10px; color:var(--dim); line-height:1.5}
-.est-pie{display:flex; align-items:center; gap:6px; font-size:10px; color:var(--dim); margin-top:auto; padding-top:4px}
-.est-rr{margin-left:auto; font-weight:700}
+.est-resumen{font-size:10px; color:var(--dim); line-height:1.55; border-left:2px solid var(--border);
+  padding-left:7px; margin:2px 0}
+.est-si{font-size:11px; font-weight:700; color:var(--green)}
+.est-no{font-size:11px; font-weight:700; color:var(--amber)}
+.est-motivo{font-size:10px; color:var(--dim); line-height:1.5}
+.est-tabla{display:flex; flex-direction:column; gap:2px; margin-top:3px}
+.est-tabla.apagada{opacity:.55}
+.est-fila{display:flex; justify-content:space-between; gap:8px; font-size:11px; color:var(--dim2)}
+.est-usar{align-self:flex-start; margin-top:auto; padding-top:6px}
 
 /* ---------- barra de operación activa ---------- */
 .barra-op{display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; margin-bottom:8px}
@@ -184,8 +212,10 @@ button,input,select,textarea{font-family:var(--mono); font-size:12px}
 .mapa-grid{display:grid; grid-template-columns:minmax(340px,1.35fr) minmax(300px,1fr); gap:16px; align-items:start}
 @media (max-width:900px){ .mapa-grid{grid-template-columns:1fr} }
 .escalera{border:1px solid var(--border); border-radius:2px; background:var(--sunk); padding:2px}
-.escalera svg{display:block; width:100%; touch-action:none}
-.tirador{cursor:ns-resize}
+/* touch-action solo en los tiradores: en todo el SVG bloqueaba el scroll
+   del dedo sobre 600px de página. */
+.escalera svg{display:block; width:100%}
+.tirador{cursor:ns-resize; touch-action:none}
 .tirador:focus-visible{outline:none}
 .tirador:focus-visible .chip-caja{stroke:var(--white); stroke-width:1.5}
 .op-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px}
@@ -218,6 +248,9 @@ button,input,select,textarea{font-family:var(--mono); font-size:12px}
 /* ---------- plan ---------- */
 pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-radius:2px; background:var(--sunk);
   font-family:var(--mono); font-size:11px; color:var(--dim2); overflow-x:auto; line-height:1.6; white-space:pre}
+/* En móvil pierde la alineación en columnas, pero se lee entero en vez de
+   quedarse cortado a la derecha. El texto copiado no cambia. */
+@media (max-width:620px){ pre.plan{white-space:pre-wrap; word-break:break-word} }
 
 /* ---------- lupa a pantalla completa ---------- */
 #lupa-velo{position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.45); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);
@@ -225,11 +258,35 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
 #lupa-velo .marco{background:var(--bg); border:1px solid var(--border); border-radius:2px; padding:8px; max-width:96vw; max-height:96dvh; display:flex; flex-direction:column; gap:6px; box-shadow:0 12px 40px rgba(0,0,0,.5)}
 #lupa-velo img{max-width:100%; max-height:84dvh; width:auto; object-fit:contain; display:block; margin:0 auto; border:1px solid var(--border)}
 
+/* ---------- tamaños de dedo ----------
+   Auditado a 360/390/430px: todo lo que se toca necesita alto de dedo, y el
+   pie no puede empujar botones fuera de la pantalla. */
+.n-corto{display:none}
+@media (max-width:620px){
+  .n-largo{display:none}
+  .n-corto{display:inline}
+  .cmd{padding:13px 0}
+  .inp{padding:10px 8px}
+  .tf-nota{padding:9px 8px}
+  .sel-btn{padding:10px 8px}
+  .sel-fila{padding:11px 8px}
+  .tipo-btn{padding:11px 0}
+  .borrar{padding:11px 0}
+  .chk{padding:11px 8px}
+  .est-usar{padding:13px 0}
+  .caja-btn{padding:11px 14px}
+}
+.sesgo-grupo.grande{gap:4px}
+.sesgo-grupo.grande .sesgo-btn{min-height:44px; font-size:13px}
+.tf-sesgo{display:block; text-align:center; font-size:13px; font-weight:700; line-height:1.5}
+.chk .marca{width:22px}
+
 /* ---------- pie fijo de navegación ---------- */
 .pie{position:fixed; left:0; right:0; bottom:0; z-index:900; background:var(--bg); border-top:1px solid var(--border);
   padding:8px 14px calc(8px + env(safe-area-inset-bottom,0px))}
-.pie-nav{display:flex; align-items:stretch; height:44px; margin-top:2px}
-.pie-nav button{flex:1; background:none; border:none; cursor:pointer; color:var(--dim2); font-size:12px}
+.pie-nav{display:flex; align-items:stretch; height:44px; margin-top:2px; overflow-x:auto; scrollbar-width:none}
+.pie-nav::-webkit-scrollbar{display:none}
+.pie-nav button{flex:1 0 auto; min-width:44px; padding:0 6px; background:none; border:none; cursor:pointer; color:var(--dim2); font-size:12px; white-space:nowrap}@media (max-width:400px){ .pie-nav button{padding:0 2px; font-size:11px} .pie{padding-left:8px; padding-right:8px} }
 .pie-nav button b{color:var(--amber); font-weight:700}
 .pie-nav button:hover b{color:var(--white)}
 </style>
@@ -253,6 +310,12 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
   </div>
   <div style="font-size:11px;color:var(--dim);margin-top:3px">// cuatro capturas, un sesgo ponderado y el trade que sale de ahí — precio en vivo desde Binance</div>
 
+  <div class="barra-sup">
+    <button class="caja-btn" id="btn-nuevo">nuevo análisis</button>
+    <button class="cmd" id="btn-ultimo" hidden>[<b>ver el último análisis</b>]</button>
+    <span class="der-sup" id="eco-sup"></span>
+  </div>
+
   <div class="ticker">
     <div>
       <span class="lbl">activo</span>
@@ -268,7 +331,7 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
       <label class="lbl" for="i-precio">precio actual</label>
       <input id="i-precio" class="inp num precio-grande" inputmode="decimal" autocomplete="off">
     </div>
-    <div class="veredicto">
+    <div class="veredicto" id="caja-veredicto">
       <div class="lbl">sesgo ponderado</div>
       <div id="ver-chip" class="ver-chip">—</div>
       <div id="ver-nota" style="font-size:11px;color:var(--dim);margin-top:5px">—</div>
@@ -291,6 +354,10 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
       <div id="aviso-guardado" hidden class="aviso amb">// no hay sitio para guardar las capturas en este navegador: se ven ahora, pero se pierden al recargar.</div>
     </div>
   </section>
+
+  <!-- Todo lo que sigue vive plegado hasta que hay capturas: al abrir la app
+       solo se ve la cabecera y los cuatro huecos. -->
+  <div id="analisis" hidden>
 
   <!-- ============ 2. CONFLUENCIA ============ -->
   <section class="sec" id="sec-confluencia">
@@ -457,6 +524,8 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
       </div>
     </div>
   </section>
+
+  </div><!-- /#analisis -->
 </div>
 
 <div class="pie" id="pie" hidden>
@@ -642,6 +711,7 @@ function estadoBase(){
   };
 }
 var S = estadoBase();
+var vista = "inicio";     // "inicio" = solo cabecera y capturas · "analisis" = todo desplegado
 var noSePuedeGuardar = false;
 var slotActivo = 0;
 
@@ -726,6 +796,8 @@ var SESGOS = [
   {v: 1, c:"↑",  n:"alcista"},
   {v: 2, c:"↑↑", n:"alcista fuerte"}
 ];
+function colorSesgo(v){ return v > 0 ? "var(--green)" : v < 0 ? "var(--red)" : "var(--dim2)"; }
+function glifoSesgo(v){ for(var i=0;i<SESGOS.length;i++) if(SESGOS[i].v===v) return SESGOS[i].c; return "="; }
 function nombreSesgo(v){ for(var i=0;i<SESGOS.length;i++) if(SESGOS[i].v===v) return SESGOS[i].n; return "neutro"; }
 
 function confluencia(){
@@ -889,10 +961,8 @@ function encaja(est){
 function aplicarEstrategia(id){
   var est = ESTRATEGIAS.filter(function(e){ return e.id === id; })[0];
   if(!est) return null;
-  var r = est.calc(contexto(est.horizonte));
-  if(!r){ eco("faltan niveles a un lado del precio para calcular " + est.nombre.toLowerCase()); return null; }
-  var tk = tick(S.precio);
-  ["entrada","stop","tp1","tp2","tp3"].forEach(function(f){ r[f] = Math.round(r[f]/tk)*tk; });
+  var ev = evaluar(est), r = ev.r;
+  if(!r){ eco(ev.motivo + " para calcular " + est.nombre.toLowerCase()); return null; }
   var ahora = new Date();
   var op = {
     id: est.id + "-" + ahora.getTime(),
@@ -983,10 +1053,6 @@ function renderTFs(){
     if(t.img) n++;
     var card = document.createElement("div");
     card.className = "tf-card" + (i === slotActivo ? " activa" : "");
-    var botones = SESGOS.map(function(o){
-      return '<button class="sesgo-btn' + (t.sesgo === o.v ? " on" : "") + '" data-s="' + o.v + '" data-i="' + i +
-             '" title="' + o.n + '" aria-label="' + esc(t.label) + ": " + o.n + '">' + o.c + "</button>";
-    }).join("");
     card.innerHTML =
       '<div class="tf-cab"><span class="tf-nom">' + esc(t.label) + '</span>' +
         '<span class="tf-peso">' + t.peso + '%</span></div>' +
@@ -997,9 +1063,8 @@ function renderTFs(){
           : '<span class="vacia"><span style="font-size:18px;color:var(--dim)">+</span>' +
             '<span style="font-size:10px;line-height:1.4">añadir<br>' + esc(t.label) + '</span></span>') +
       '</button>' +
-      '<div class="tf-pie">' +
-        '<div class="sesgo-grupo" role="group" aria-label="Sesgo de ' + esc(t.label) + '">' + botones + '</div>' +
-      "</div>";
+      '<div class="tf-pie"><span class="tf-sesgo" style="color:' + colorSesgo(t.sesgo) + '" title="' +
+        esc(nombreSesgo(t.sesgo)) + '">' + glifoSesgo(t.sesgo) + "</span></div>";
     cont.appendChild(card);
   });
   el("cuenta-img").textContent = n + "/4 capturas";
@@ -1007,9 +1072,15 @@ function renderTFs(){
   // La nota no cabe dentro de una columna de 85px: va debajo, y es la de la
   // temporalidad seleccionada.
   var a = S.tfs[slotActivo];
+  var botones = SESGOS.map(function(o){
+    return '<button class="sesgo-btn' + (a.sesgo === o.v ? " on" : "") + '" data-s="' + o.v + '" data-i="' + slotActivo +
+           '" title="' + o.n + '" aria-label="' + esc(a.label) + ": " + o.n + '">' + o.c + "</button>";
+  }).join("");
   el("nota-activa").innerHTML =
-    '<div class="nota-cab"><span class="lbl" style="margin:0">nota de ' + esc(a.label) + '</span>' +
+    '<div class="nota-cab"><span class="lbl" style="margin:0">sesgo y nota de ' + esc(a.label) + '</span>' +
       '<span class="pista" style="font-size:10px;color:var(--dim)">// toca otra captura para cambiar de temporalidad</span></div>' +
+    '<div class="sesgo-grupo grande" role="group" aria-label="Sesgo de ' + esc(a.label) + '">' + botones + '</div>' +
+    '<div style="font-size:10px;color:' + colorSesgo(a.sesgo) + ';margin:4px 0 5px">' + esc(nombreSesgo(a.sesgo)) + '</div>' +
     '<textarea class="tf-nota" id="tf-nota" rows="2" placeholder="// qué ves en ' + esc(a.label) + '">' + esc(a.nota) + '</textarea>' +
     (a.img ? '<div class="fila" style="margin-top:5px"><button class="cmd" data-quitar="' + slotActivo + '">[<b>quitar la captura de ' + esc(a.label) + '</b>]</button></div>' : "");
 }
@@ -1189,7 +1260,7 @@ function renderMapa(){
     // asa: dos rayitas, señal de que se arrastra
     grupo.appendChild(svgEl("line", {x1:chipX+ancho-1, y1:py-4, x2:chipX+ancho-1, y2:py+4, stroke:h.hex, "stroke-width":1, opacity:.6}));
     // zona de agarre generosa
-    grupo.appendChild(svgEl("rect", {x:pL, y:py-11, width:pR-pL, height:22, fill:"transparent"}));
+    grupo.appendChild(svgEl("rect", {x:pL, y:py-18, width:pR-pL, height:36, fill:"transparent"}));
     g.appendChild(grupo);
   });
 
@@ -1259,15 +1330,26 @@ function initArrastre(){
   });
 }
 
-/* ================= render: estrategias ================= */
-// R:R que daría cada estrategia si se aplicase ahora, sin llegar a aplicarla.
-function previaRR(est){
+/* ================= render: estrategias =================
+   Cada estrategia se evalúa contra lo que hay ahora en pantalla y devuelve, o
+   bien la operación que propondría, o bien el motivo por el que no es momento
+   de entrar. Lo segundo es tan útil como lo primero. */
+function evaluar(est){
   var r = est.calc(contexto(est.horizonte));
-  if(!r) return null;
+  if(!r) return {ok:false, motivo:"faltan niveles a un lado del precio", r:null};
+  var tk = tick(S.precio);
+  ["entrada","stop","tp1","tp2","tp3"].forEach(function(f){ r[f] = Math.round(r[f]/tk)*tk; });
   var riesgo = r.dir === "long" ? r.entrada - r.stop : r.stop - r.entrada;
-  if(!(riesgo > 0)) return null;
-  var premio = r.dir === "long" ? r.tp1 - r.entrada : r.entrada - r.tp1;
-  return {rr: premio/riesgo, dir: r.dir};
+  if(!(riesgo > 0)) return {ok:false, motivo:"el stop caería del lado que no toca", r:null};
+  r.riesgo = riesgo;
+  r.rr = (r.dir === "long" ? r.tp1 - r.entrada : r.entrada - r.tp1) / riesgo;
+  if(!encaja(est)){
+    return {ok:false, r:r, motivo: est.regimen === "tendencia"
+      ? "el sesgo no es lo bastante claro: esta necesita tendencia"
+      : "hay tendencia marcada: operar contra el extremo es ir a contracorriente"};
+  }
+  if(r.rr < 1.5) return {ok:false, r:r, motivo:"R:R de " + fmt(r.rr, 2) + " al primer objetivo: no compensa"};
+  return {ok:true, r:r};
 }
 
 function renderEstrategias(){
@@ -1275,24 +1357,43 @@ function renderEstrategias(){
   var usada = opActiva().estrategia;
   cont.innerHTML = "";
   ESTRATEGIAS.forEach(function(est){
-    var ok = encaja(est), pr = previaRR(est);
-    var b = document.createElement("button");
-    b.type = "button";
-    b.className = "est" + (ok ? " encaja" : "") + (usada === est.id ? " usada" : "");
-    b.setAttribute("data-est", est.id);
-    var colDir = pr ? (pr.dir === "long" ? "var(--green)" : "var(--red)") : "var(--dim)";
-    b.innerHTML =
-      '<div class="est-cab"><span class="est-nom">' + esc(est.nombre) + '</span>' +
-        '<span class="badge">' + est.horizonte + '</span></div>' +
-      '<div class="est-lema">' + esc(est.lema) + '</div>' +
-      '<div class="est-det">' + esc(est.detalle) + '</div>' +
-      '<div class="est-pie">' +
-        (ok ? '<span style="color:var(--violet)">encaja ahora</span>' : '<span>fuera de su régimen</span>') +
-        '<span class="est-rr" style="color:' + colDir + '">' +
-          (pr ? (pr.dir === "long" ? "largo" : "corto") + "  " + fmt(pr.rr, 2) + " R" : "sin niveles") +
-        '</span>' +
-      '</div>';
-    cont.appendChild(b);
+    var ev = evaluar(est), r = ev.r;
+    var col = !r ? "var(--dim)" : r.dir === "long" ? "var(--green)" : "var(--red)";
+    var card = document.createElement("div");
+    card.className = "est" + (ev.ok ? " ok" : "") + (usada === est.id ? " usada" : "");
+
+    var cuerpo;
+    if(!r){
+      cuerpo = '<div class="est-no">· no se puede calcular</div>' +
+               '<div class="est-motivo">' + esc(ev.motivo) + "</div>";
+    } else {
+      var filas = [
+        ["dirección", (r.dir === "long" ? "largo" : "corto"), col],
+        ["entrada", fmtP(r.entrada), "var(--white)"],
+        ["stop", fmtP(r.stop), "var(--red)"],
+        ["objetivo 1", fmtP(r.tp1), "var(--green)"],
+        ["R:R", fmt(r.rr, 2), r.rr >= 1.5 ? "var(--green)" : "var(--amber)"]
+      ].map(function(f){
+        return '<div class="est-fila"><span>' + f[0] + '</span>' +
+               '<span style="color:' + f[2] + ';font-weight:700">' + f[1] + "</span></div>";
+      }).join("");
+      cuerpo =
+        (ev.ok
+          ? '<div class="est-si">· operable ahora</div>'
+          : '<div class="est-no">· no es momento de entrar</div><div class="est-motivo">' + esc(ev.motivo) + "</div>") +
+        '<div class="est-tabla' + (ev.ok ? "" : " apagada") + '">' + filas + "</div>";
+    }
+
+    card.innerHTML =
+      '<h3 class="est-nom">' + esc(est.nombre) + "</h3>" +
+      '<div class="est-cab"><span class="badge">' + est.horizonte + '</span>' +
+        '<span class="badge">' + est.regimen + "</span></div>" +
+      '<div class="est-lema">' + esc(est.lema) + "</div>" +
+      '<div class="est-resumen">' + esc(r ? r.nota : est.detalle) + "</div>" +
+      cuerpo +
+      '<button class="cmd est-usar" data-est="' + est.id + '">[<b>' +
+        (ev.ok ? "usar esta operación" : "usarla igualmente") + "</b>]</button>";
+    cont.appendChild(card);
   });
   var sc = Math.abs(confluencia().score);
   el("est-regimen").textContent = sc >= 40 ? "régimen: tendencia" : sc < 25 ? "régimen: rango" : "régimen: mixto";
@@ -1565,6 +1666,27 @@ function pintarPlan(){
 }
 
 /* ================= pintado global ================= */
+// Al abrir la app solo se ve la cabecera y los cuatro huecos. El análisis se
+// despliega al completar las capturas, o a mano con [ver el último análisis].
+function pintarVista(){
+  var conCapturas = S.tfs.filter(function(t){ return t.img; }).length;
+  el("analisis").hidden = vista !== "analisis";
+  el("caja-veredicto").hidden = vista !== "analisis";
+  el("btn-ultimo").hidden = !(vista === "inicio" && conCapturas > 0);
+  el("btn-ultimo").innerHTML = "[<b>ver el último análisis (" + conCapturas + "/4)</b>]";
+  el("eco-sup").textContent = vista === "inicio"
+    ? (conCapturas ? "// tienes un análisis guardado" : "// añade las cuatro capturas para empezar")
+    : "// " + S.activo + " · " + conCapturas + "/4 capturas";
+  el("pie").hidden = vista !== "analisis";
+}
+
+function abrirAnalisis(){
+  if(vista === "analisis") return;
+  vista = "analisis";
+  pintarTodo();
+  requestAnimationFrame(function(){ renderMapa(); });
+}
+
 function pintarTodo(){
   renderActivo();
   renderTFs();
@@ -1579,6 +1701,7 @@ function pintarTodo(){
   pintarRiesgo();
   pintarValidacion();
   pintarPlan();
+  pintarVista();
   // No pisar el campo mientras se escribe en él.
   if(document.activeElement !== el("i-precio")) el("i-precio").value = fmtP(S.precio);
 }
@@ -1610,7 +1733,9 @@ function meterImagen(i, file){
     S.tfs[i].img = dataUrl;
     S.tfs[i].activo = S.activo;    // para poder avisar si luego se cambia de par
     slotActivo = Math.min(3, i + 1);
-    guardar(); renderTFs();
+    guardar();
+    if(S.tfs.every(function(t){ return t.img; })) abrirAnalisis();   // las cuatro puestas
+    else { renderTFs(); pintarVista(); }
   });
 }
 var inputFile = document.createElement("input");
@@ -1634,11 +1759,6 @@ function conectar(){
       if(S.tfs[i].img){ abrirLupa(i); } else { slotPendiente = i; inputFile.click(); }
       renderTFs(); return;
     }
-    var sb = e.target.closest(".sesgo-btn");
-    if(sb){
-      S.tfs[+sb.getAttribute("data-i")].sesgo = +sb.getAttribute("data-s");
-      guardar(); pintarTodo(); return;
-    }
     var q = e.target.closest("[data-quitar]");
     if(q){
       S.tfs[+q.getAttribute("data-quitar")].img = null;
@@ -1649,6 +1769,11 @@ function conectar(){
     if(e.target.id === "tf-nota"){ S.tfs[slotActivo].nota = e.target.value; guardar(); pintarPlan(); }
   });
   el("nota-activa").addEventListener("click", function(e){
+    var sb = e.target.closest(".sesgo-btn");
+    if(sb){
+      S.tfs[+sb.getAttribute("data-i")].sesgo = +sb.getAttribute("data-s");
+      guardar(); pintarTodo(); return;
+    }
     var q = e.target.closest("[data-quitar]");
     if(q){ S.tfs[+q.getAttribute("data-quitar")].img = null; guardar(); renderTFs(); }
   });
@@ -1762,9 +1887,23 @@ function conectar(){
     guardar(); pintarTodo();
   });
 
+  /* --- vistas --- */
+  el("btn-ultimo").addEventListener("click", abrirAnalisis);
+  el("btn-nuevo").addEventListener("click", function(){
+    S = estadoBase();
+    S.atr = null;
+    try{ localStorage.removeItem(LS); }catch(e){}
+    S.tfs.forEach(function(t){ t.img = null; t.activo = null; });
+    slotActivo = 0;
+    vista = "inicio";
+    precioDeMercado();          // conserva el precio de mercado ya consultado
+    sincronizarInputs(); pintarTodo();
+    eco("análisis nuevo: añade las cuatro capturas");
+  });
+
   /* --- estrategias --- */
   el("rejilla-est").addEventListener("click", function(e){
-    var b = e.target.closest("[data-est]");
+    var b = e.target.closest(".est-usar");
     if(!b) return;
     var op = aplicarEstrategia(b.getAttribute("data-est"));
     if(op){ guardar(); pintarTodo(); eco("guardada como " + etiquetaOp(op)); }
@@ -1849,15 +1988,17 @@ function conectar(){
 
   /* --- pie de navegación --- */
   var destinos = [
-    {id:"sec-evidencia", l:"evidencia", c:"var(--violet)"},
-    {id:"sec-confluencia", l:"confluencia", c:"var(--amber)"},
-    {id:"sec-estrategias", l:"estrategias", c:"var(--violet)"},
-    {id:"sec-mapa", l:"mapa", c:"var(--green)"},
-    {id:"sec-riesgo", l:"riesgo", c:"var(--orange)"},
-    {id:"sec-plan", l:"plan", c:"var(--white)"}
+    {id:"sec-evidencia",  l:"evidencia",   corto:"evid",  c:"var(--violet)"},
+    {id:"sec-confluencia",l:"confluencia", corto:"conf",  c:"var(--amber)"},
+    {id:"sec-estrategias",l:"estrategias", corto:"estr",  c:"var(--violet)"},
+    {id:"sec-mapa",       l:"mapa",        corto:"mapa",  c:"var(--green)"},
+    {id:"sec-riesgo",     l:"riesgo",      corto:"riesgo",c:"var(--orange)"},
+    {id:"sec-plan",       l:"plan",        corto:"plan",  c:"var(--white)"}
   ];
   el("pie-nav").innerHTML = destinos.map(function(d){
-    return '<button data-ir="' + d.id + '">[<b style="color:' + d.c + '">' + d.l + "</b>]</button>";
+    return '<button data-ir="' + d.id + '">[<b style="color:' + d.c + '">' +
+      '<span class="n-largo">' + d.l + '</span><span class="n-corto">' + d.corto + "</span>" +
+      "</b>]</button>";
   }).join("");
   el("pie-nav").addEventListener("click", function(e){
     var b = e.target.closest("[data-ir]");
