@@ -26,6 +26,11 @@ y si no caben la página lo dice en vez de fallar en silencio.
 (`↓↓ ↓ = ↑ ↑↑`) y pesa según su altura: 40/30/20/10. De ahí sale un veredicto
 de largo, corto o sin sesgo, con el desglose de lo que aporta cada una.
 
+**Plegado.** Niveles y Mapa de operación se abren y cierran desde el triángulo
+de su cabecera, y recuerdan cómo los dejaste. Niveles llega plegada: se
+consulta de vez en cuando, no en cada trade. Con el mapa cerrado, su cabecera
+resume la operación en una línea (`largo · 2,33 R`).
+
 **Niveles.** Una línea por nivel: el precio y su temporalidad. Si es soporte o
 resistencia no se marca, se deduce de su posición respecto al precio —así no se
 queda desfasado cuando el precio se mueve— y se ve como una letra de color.
@@ -119,6 +124,16 @@ tipo `diff` para los resultados. Los colores son tokens (`--green` positivo,
 `--red` negativo, `--amber` acento, `--orange`/`--blue` para resistencia y
 soporte), nunca nombres de color sueltos. Toda animación respeta
 `prefers-reduced-motion`.
+
+## Lo que la app NO hace
+
+No analiza las capturas. No hay lectura de gráficos, ni OCR, ni modelo de
+visión: las cuatro imágenes se guardan y se muestran para que las mires tú.
+Todo lo que calcula sale de lo que introduces —el sesgo de cada temporalidad,
+los niveles, el rango de vela— más el precio de Binance. Las estrategias son
+aritmética sobre esos números. Es una calculadora disciplinada, no un analista:
+el criterio lo pones tú, y lo que aporta es no dejarte saltar pasos ni mentirte
+con el tamaño de posición.
 
 ## Móvil
 

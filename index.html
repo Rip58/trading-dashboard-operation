@@ -56,6 +56,16 @@ button,input,select,textarea{font-family:var(--mono); font-size:12px}
 .sec-cab .tri{flex-shrink:0}
 .sec-cab h2{margin:0; font-size:14px; font-weight:700; color:var(--white)}
 .sec-cab .der{margin-left:auto; font-size:11px; color:var(--dim); white-space:nowrap}
+/* Secciones plegables: el triángulo de la cabecera es el interruptor, y el
+   área de toque es el título entero. ▾ abierta · ▸ plegada. */
+.sec-tit{margin:0; font-size:14px; font-weight:700; line-height:1.4}
+.plegar{display:inline-flex; align-items:baseline; gap:8px; background:none; border:none; padding:0;
+  cursor:pointer; font-family:var(--mono); font-size:14px; font-weight:700; color:var(--white)}
+.plegar:hover{color:var(--amber)}
+.plegar .tri{flex-shrink:0}
+@media (max-width:620px){ .plegar{padding:14px 0} }
+.sec.plegada > .com, .sec.plegada > .cuerpo{display:none}
+
 .com{font-size:11px; color:var(--dim); padding-left:18px; margin:2px 0 8px}
 .cuerpo{padding-left:18px}
 @media (max-width:560px){ .cuerpo,.com{padding-left:10px} }
@@ -389,10 +399,12 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
 
   <!-- ============ 3. NIVELES ============ -->
   <section class="sec" id="sec-niveles">
-    <div class="sec-cab"><span class="tri" style="color:var(--blue)">▸</span><h2>niveles</h2>
+    <div class="sec-cab">
+      <h2 class="sec-tit"><button type="button" class="plegar" data-plegar="niveles" aria-expanded="true"
+        aria-controls="cuerpo-niveles"><span class="tri" style="color:var(--blue)">▾</span>niveles</button></h2>
       <span class="der" id="niv-cuenta">0 niveles</span></div>
     <div class="com">// los precios donde el gráfico ya reaccionó</div>
-    <div class="cuerpo">
+    <div class="cuerpo" id="cuerpo-niveles">
       <div class="tabla">
         <div id="niv-lista"></div>
       </div>
@@ -421,10 +433,12 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
 
   <!-- ============ 4. MAPA ============ -->
   <section class="sec" id="sec-mapa">
-    <div class="sec-cab"><span class="tri" style="color:var(--green)">▸</span><h2>mapa de operación</h2>
-      <span class="der">arrastra las líneas</span></div>
+    <div class="sec-cab">
+      <h2 class="sec-tit"><button type="button" class="plegar" data-plegar="mapa" aria-expanded="true"
+        aria-controls="cuerpo-mapa"><span class="tri" style="color:var(--green)">▾</span>mapa de operación</button></h2>
+      <span class="der" id="mapa-resumen">—</span></div>
     <div class="com">// entrada, stop y objetivos sobre el eje de precio real</div>
-    <div class="cuerpo">
+    <div class="cuerpo" id="cuerpo-mapa">
       <div class="barra-op">
         <div style="flex:1;min-width:220px">
           <span class="lbl">operación activa</span>
@@ -751,7 +765,8 @@ function estadoBase(){
     atr: null,                     // null = estimado a partir de los niveles
     riesgo: {capital:5000, pct:1, apal:5},
     check: {},
-    verTodos: false
+    verTodos: false,
+    plegado: {niveles:true, mapa:false}   // los niveles se consultan de vez en cuando
   };
 }
 var S = estadoBase();
@@ -829,6 +844,10 @@ function cargar(){
       if(isFinite(d.riesgo.apal))    S.riesgo.apal = +d.riesgo.apal;
     }
     if(d.check && typeof d.check === "object") S.check = d.check;
+    if(d.plegado && typeof d.plegado === "object"){
+      S.plegado.niveles = !!d.plegado.niveles;
+      S.plegado.mapa = !!d.plegado.mapa;
+    }
   }catch(e){ /* estado corrupto: se queda el de fábrica */ }
 }
 
@@ -1736,6 +1755,23 @@ function pintarVista(){
   el("pie").hidden = vista !== "analisis";
 }
 
+function pintarPlegados(){
+  [["niveles","sec-niveles"], ["mapa","sec-mapa"]].forEach(function(par){
+    var plegada = !!S.plegado[par[0]];
+    el(par[1]).classList.toggle("plegada", plegada);
+    var b = document.querySelector('.plegar[data-plegar="' + par[0] + '"]');
+    if(b){
+      b.setAttribute("aria-expanded", plegada ? "false" : "true");
+      b.querySelector(".tri").textContent = plegada ? "▸" : "▾";
+    }
+  });
+  // Con el mapa plegado, la cabecera resume la operación en una línea.
+  var m = metricas(), o = opActiva();
+  el("mapa-resumen").textContent = (o.dir === "long" ? "largo" : "corto") +
+    (m.valido && isFinite(m.rr1) ? " · " + fmt(m.rr1, 2) + " R" : "") +
+    (S.plegado.mapa ? "" : " · arrastra las líneas");
+}
+
 function abrirAnalisis(){
   if(vista === "analisis") return;
   vista = "analisis";
@@ -1757,6 +1793,7 @@ function pintarTodo(){
   pintarRiesgo();
   pintarValidacion();
   pintarPlan();
+  pintarPlegados();
   pintarVista();
   // No pisar el campo mientras se escribe en él.
   if(document.activeElement !== el("i-precio")) el("i-precio").value = fmtP(S.precio);
@@ -1937,6 +1974,17 @@ function conectar(){
     S.niveles.push({p: Math.round(S.precio), tf: ""});
     S.niveles.sort(function(a,b){ return b.p - a.p; });
     guardar(); pintarTodo();
+  });
+
+  /* --- plegar secciones --- */
+  document.addEventListener("click", function(e){
+    var b = e.target.closest(".plegar");
+    if(!b) return;
+    var k = b.getAttribute("data-plegar");
+    S.plegado[k] = !S.plegado[k];
+    guardar(); pintarPlegados();
+    // El SVG necesita un ancho ya medido: al desplegar hay que repintarlo.
+    if(k === "mapa" && !S.plegado.mapa) requestAnimationFrame(function(){ renderMapa(); });
   });
 
   /* --- vistas --- */
