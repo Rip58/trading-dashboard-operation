@@ -571,27 +571,34 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
       <span class="der" id="ia-estado">sin clave</span></div>
     <div class="com">// una clave de Anthropic aquí y la IA lee las capturas por ti</div>
     <div class="cuerpo" id="cuerpo-ajustes">
-      <div class="aj-grid">
+      <div id="srv-estado" class="aviso amb">// comprobando el servidor…</div>
+      <div class="aj-grid" style="margin-top:10px">
         <div>
-          <label class="lbl" for="i-clave">clave de API de Anthropic</label>
-          <input id="i-clave" class="inp" type="password" autocomplete="off" spellcheck="false"
-                 placeholder="sk-ant-..." aria-describedby="aviso-clave">
+          <label class="lbl" for="i-modelo">modelo</label>
+          <input id="i-modelo" class="inp" autocomplete="off" spellcheck="false" placeholder="route-llm">
+          <div style="font-size:10px;color:var(--dim);margin-top:3px">
+            // route-llm elige el modelo solo; escribe otro nombre de tu catálogo para forzarlo
+          </div>
         </div>
         <div>
-          <span class="lbl">modelo</span>
-          <div class="sel" id="sel-modelo"></div>
+          <label class="lbl" for="i-acceso">clave de acceso</label>
+          <input id="i-acceso" class="inp" type="password" autocomplete="off" spellcheck="false"
+                 placeholder="solo si la pusiste en Vercel">
+          <div style="font-size:10px;color:var(--dim);margin-top:3px">
+            // la de DASHBOARD_CLAVE, no la de Abacus
+          </div>
         </div>
       </div>
       <div class="fila" style="margin-top:8px">
-        <button class="cmd" id="btn-probar">[<b>probar la clave</b>]</button>
+        <button class="cmd" id="btn-probar">[<b>probar la conexión</b>]</button>
         <span style="color:var(--dim)">·</span>
-        <button class="cmd" id="btn-borrar-clave">[<b>borrar la clave</b>]</button>
+        <button class="cmd" id="btn-recomprobar">[<b>volver a comprobar</b>]</button>
         <span id="ia-eco" style="font-size:11px"></span>
       </div>
-      <div id="aviso-clave" class="aviso amb" style="margin-top:10px">
-        // la clave se queda en este navegador y viaja solo a la API de Anthropic — ni a esta web ni a nadie más.<br>
-        // aun así, cualquier extensión que tengas instalada puede leerla: usa una clave con límite de gasto.<br>
-        // cada análisis cuesta dinero de tu cuenta. dentro del artefacto de claude.ai no funciona, solo en la app desplegada.
+      <div class="aviso amb" style="margin-top:10px">
+        // la clave de Abacus vive en las variables de entorno de Vercel y nunca baja al navegador.<br>
+        // pero el despliegue es público: sin DASHBOARD_CLAVE, cualquiera con la URL gasta de tu cuenta.<br>
+        // cada análisis consume tu cuota. en un fichero local o en el artefacto no hay servidor, así que no funciona.
       </div>
     </div>
   </section>
@@ -789,74 +796,95 @@ function precioDeMercado(){
   return false;
 }
 
-/* ================= análisis con IA =================
-   La clave se guarda aparte del resto del estado, a propósito: así no puede
-   colarse en el JSON que copia el botón del plan ni en ningún volcado.
+/* ================= análisis con IA (Abacus RouteLLM) =================
+   La clave NO está aquí. Vive en las variables de entorno de Vercel y solo la
+   ve la función /api/analizar, que hace de puente. El navegador manda los
+   mensajes y recibe la respuesta; la clave nunca baja al cliente.
 
-   La llamada sale del navegador directamente a Anthropic. Eso exige la
-   cabecera anthropic-dangerous-direct-browser-access, que se llama así porque
-   la clave vive en el cliente: es aceptable para una herramienta personal con
-   una clave limitada, y no lo es para nada compartido. La alternativa sería
-   una función en el servidor que guarde la clave, pero entonces cualquiera con
-   la URL gastaría de tu cuenta. */
-var CLAVE_LS = "tdo-clave-anthropic";
-var MODELOS = [
-  {id:"claude-opus-5",   nom:"Opus 5",   coste:"el más capaz · $5 / $25 por millón"},
-  {id:"claude-sonnet-5", nom:"Sonnet 5", coste:"equilibrado · $2 / $10 por millón"},
-  {id:"claude-haiku-4-5",nom:"Haiku 4.5",coste:"el más barato · $1 / $5 por millón"}
-];
+   RouteLLM es compatible con OpenAI, así que los mensajes van en ese formato:
+   content como lista de {type:"text"} y {type:"image_url"} con data URI. */
+var RUTA_IA = "/api/analizar";
+var CLAVE_ACCESO_LS = "tdo-clave-acceso";   // la puerta opcional del servidor, no la de Abacus
 
-function leerClave(){
-  try{ return localStorage.getItem(CLAVE_LS) || ""; }catch(e){ return ""; }
+var servidorIA = {consultado:false, listo:false, modelo:null, protegido:false, error:null};
+
+function leerAcceso(){
+  try{ return localStorage.getItem(CLAVE_ACCESO_LS) || ""; }catch(e){ return ""; }
 }
-function guardarClave(v){
-  try{ v ? localStorage.setItem(CLAVE_LS, v) : localStorage.removeItem(CLAVE_LS); }catch(e){}
+function guardarAcceso(v){
+  try{ v ? localStorage.setItem(CLAVE_ACCESO_LS, v) : localStorage.removeItem(CLAVE_ACCESO_LS); }catch(e){}
 }
-function hayClave(){ return leerClave().trim().length > 10; }
 
-// Una captura guardada es "data:image/jpeg;base64,XXX"; la API quiere las dos
-// mitades por separado.
+function cabecerasIA(){
+  var h = {"content-type":"application/json"};
+  var a = leerAcceso().trim();
+  if(a) h["x-clave"] = a;
+  return h;
+}
+
+// Pregunta al servidor si tiene clave, sin gastar nada.
+function comprobarServidor(){
+  return fetch(RUTA_IA, {method:"GET", cache:"no-store"})
+    .then(function(r){
+      if(!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    })
+    .then(function(d){
+      servidorIA = {consultado:true, listo:!!d.listo, modelo:d.modelo || "route-llm",
+                    protegido:!!d.protegido, error: d.listo ? null : "el servidor no tiene ABACUS_API_KEY"};
+      if(d.modelo && !S.ia.modelo) S.ia.modelo = d.modelo;
+      return servidorIA;
+    })
+    .catch(function(e){
+      // Abriendo el index.html a pelo no hay servidor: es lo esperado.
+      servidorIA = {consultado:true, listo:false, modelo:null, protegido:false,
+                    error: location.protocol === "file:"
+                      ? "abre la app desplegada: en un fichero local no hay servidor"
+                      : "no se encuentra /api/analizar (" + (e.message || "sin respuesta") + ")"};
+      return servidorIA;
+    });
+}
+
+// Una captura guardada es "data:image/jpeg;base64,XXX"; en formato OpenAI el
+// data URI va entero.
 function bloqueImagen(dataUrl){
-  var m = /^data:(image\/[a-z+]+);base64,(.+)$/i.exec(dataUrl || "");
-  if(!m) return null;
-  return {type:"image", source:{type:"base64", media_type:m[1], data:m[2]}};
+  if(!/^data:image\/[a-z+]+;base64,/i.test(dataUrl || "")) return null;
+  return {type:"image_url", image_url:{url:dataUrl}};
 }
 
 function llamarIA(mensajes, maxTokens){
-  var clave = leerClave().trim();
-  if(!clave) return Promise.reject(new Error("no hay clave guardada"));
-  return fetch("https://api.anthropic.com/v1/messages", {
+  return fetch(RUTA_IA, {
     method:"POST",
-    headers:{
-      "content-type":"application/json",
-      "x-api-key":clave,
-      "anthropic-version":"2023-06-01",
-      "anthropic-dangerous-direct-browser-access":"true"
-    },
+    headers: cabecerasIA(),
     body: JSON.stringify({
-      model: S.ia.modelo,
-      max_tokens: maxTokens || 4000,
+      model: S.ia.modelo || undefined,
+      max_tokens: maxTokens || 3000,
       messages: mensajes
     })
   }).then(function(r){
-    return r.json().then(function(j){
-      if(!r.ok){
-        var det = j && j.error && j.error.message ? j.error.message : "HTTP " + r.status;
-        throw new Error(det);
-      }
+    return r.text().then(function(t){
+      var j = null;
+      try{ j = JSON.parse(t); }catch(e){}
+      if(!r.ok) throw new Error((j && j.error) || ("HTTP " + r.status));
+      if(!j) throw new Error("respuesta ilegible del servidor");
       return j;
-    }, function(){ throw new Error("respuesta ilegible (HTTP " + r.status + ")"); });
+    });
   });
 }
 
+// Respuesta de OpenAI: choices[0].message.content
 function textoDe(resp){
-  return (resp.content || []).filter(function(b){ return b.type === "text"; })
-    .map(function(b){ return b.text; }).join("\n");
+  var c = resp && resp.choices && resp.choices[0] && resp.choices[0].message;
+  if(!c) return "";
+  if(typeof c.content === "string") return c.content;
+  if(Array.isArray(c.content)){
+    return c.content.filter(function(b){ return b && b.type === "text"; })
+      .map(function(b){ return b.text; }).join("\n");
+  }
+  return "";
 }
 
-// El modelo devuelve JSON, a veces envuelto en un bloque de código. Se pide
-// JSON en el prompt en lugar de con esquema para no depender de una forma de
-// petición que no puedo probar contra la API real desde aquí.
+// El modelo devuelve JSON, a veces envuelto en un bloque de código.
 function jsonDe(txt){
   var t = String(txt || "").trim();
   var cerca = t.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -895,7 +923,7 @@ function estadoBase(){
     check: {},
     verTodos: false,
     plegado: {niveles:true, mapa:false, ajustes:true},
-    ia: {modelo:"claude-opus-5", resumen:null, valoracion:null, cuando:null}
+    ia: {modelo:"route-llm", resumen:null, valoracion:null, cuando:null}
   };
 }
 var S = estadoBase();
@@ -979,7 +1007,7 @@ function cargar(){
       if(typeof d.plegado.ajustes === "boolean") S.plegado.ajustes = d.plegado.ajustes;
     }
     if(d.ia && typeof d.ia === "object"){
-      if(MODELOS.some(function(m){ return m.id === d.ia.modelo; })) S.ia.modelo = d.ia.modelo;
+      if(typeof d.ia.modelo === "string" && d.ia.modelo) S.ia.modelo = d.ia.modelo;
       S.ia.resumen = d.ia.resumen || null;
       S.ia.valoracion = d.ia.valoracion || null;
       S.ia.cuando = d.ia.cuando || null;
@@ -1586,6 +1614,7 @@ function pasoLeerGraficos(){
     S.ia.resumen = {
       activo: d.activo ? String(d.activo) : null,
       aviso: d.aviso ? String(d.aviso) : null,
+      modelo: (r && r.model) || null,      // route-llm dice a qué modelo enrutó
       uso: r.usage || null
     };
     S.ia.cuando = new Date().toISOString();
@@ -1617,7 +1646,7 @@ function pasoValorarOperacion(){
     '{"veredicto":"a favor|con matices|en contra","confianza":"alta|media|baja",' +
     '"razon":"dos o tres frases","riesgos":["riesgo concreto"],"ajuste":"un cambio que la mejoraría, o vacío"}';
 
-  return llamarIA([{role:"user", content:[{type:"text", text:ctx}]}], 1500).then(function(r){
+  return llamarIA([{role:"user", content:ctx}], 1500).then(function(r){
     var d = jsonDe(textoDe(r));
     S.ia.valoracion = {
       veredicto: String(d.veredicto || "").toLowerCase(),
@@ -1638,10 +1667,10 @@ var iaError = null;         // último fallo, hasta el siguiente intento
 
 function analizarConIA(){
   if(iaOcupada) return;
-  if(!hayClave()){
+  if(!servidorIA.listo){
     S.plegado.ajustes = false; pintarPlegados();
     el("sec-ajustes").scrollIntoView({behavior: reducido() ? "auto" : "smooth", block:"start"});
-    eco("primero guarda tu clave de API en ajustes");
+    eco(servidorIA.error || "el servidor de IA no está listo");
     return;
   }
   iaOcupada = true;
@@ -1696,24 +1725,31 @@ function pintarIA(){
 }
 
 function pintarAjustes(){
-  var items = MODELOS.map(function(m){
-    return {v:m.id, btn: esc(m.nom),
-            html:'<span style="display:inline-block;min-width:78px">' + esc(m.nom) + "</span>" +
-                 '<span style="color:var(--dim)">' + esc(m.coste) + "</span>"};
-  });
-  pintarSelect("sel-modelo", items, S.ia.modelo, function(v){
-    S.ia.modelo = v; guardar(); pintarAjustes();
-  });
-  var r = S.ia.resumen;
-  el("ia-estado").textContent = !hayClave() ? "sin clave"
+  var e = el("srv-estado");
+  if(!servidorIA.consultado){
+    e.className = "aviso amb"; e.removeAttribute("style"); e.innerHTML = "// comprobando el servidor…";
+  } else if(servidorIA.listo){
+    e.className = "aviso amb";
+    e.setAttribute("style", "border-color:var(--green);background:rgba(78,204,163,.08);color:var(--green)");
+    e.innerHTML = "// servidor listo · modelo por defecto " + esc(servidorIA.modelo) +
+      (servidorIA.protegido ? " · protegido con clave de acceso"
+                            : " · <b>sin clave de acceso: la URL es pública</b>");
+  } else {
+    e.className = "aviso"; e.removeAttribute("style");
+    e.innerHTML = "// " + esc(servidorIA.error || "el servidor de IA no responde");
+  }
+
+  if(document.activeElement !== el("i-modelo")) el("i-modelo").value = S.ia.modelo || "";
+  el("ia-estado").textContent = !servidorIA.listo ? "sin servidor"
     : S.ia.cuando ? "último análisis " + new Date(S.ia.cuando).toLocaleTimeString("es-ES", {hour:"2-digit", minute:"2-digit"})
-    : "clave guardada";
+    : "listo";
+
   var b = el("btn-ia");
   var listas = S.tfs.filter(function(t){ return t.img; }).length;
-  b.innerHTML = "[<b>" + (hayClave() ? "analizar con IA" : "analizar con IA (falta clave)") + "</b>]";
+  b.innerHTML = "[<b>" + (servidorIA.listo ? "analizar con IA" : "analizar con IA (sin servidor)") + "</b>]";
   b.disabled = listas === 0 || iaOcupada;
-  // Aviso de la lectura: activo distinto del elegido, o imagen que no es gráfico.
-  var extra = el("aviso-activo");
+
+  var r = S.ia.resumen, extra = el("aviso-activo");
   if(r && r.aviso){
     extra.innerHTML = '<div class="aviso amb">// la IA avisa: ' + esc(r.aviso) + "</div>" + extra.innerHTML;
   }
@@ -2317,25 +2353,27 @@ function conectar(){
     S.plegado.ajustes = false;
     guardar(); pintarPlegados();
     el("sec-ajustes").scrollIntoView({behavior: reducido() ? "auto" : "smooth", block:"start"});
-    el("i-clave").focus();
   });
-  el("i-clave").addEventListener("change", function(){
-    guardarClave(this.value.trim());
-    this.value = "";                        // no dejarla a la vista
-    pintarAjustes();
-    eco(hayClave() ? "clave guardada en este navegador" : "clave borrada");
+  el("i-modelo").addEventListener("change", function(){
+    S.ia.modelo = this.value.trim() || (servidorIA.modelo || "route-llm");
+    this.value = S.ia.modelo;
+    guardar(); eco("modelo: " + S.ia.modelo);
   });
-  el("btn-borrar-clave").addEventListener("click", function(){
-    guardarClave(""); el("i-clave").value = "";
-    pintarAjustes(); eco("clave borrada de este navegador");
+  el("i-acceso").addEventListener("change", function(){
+    guardarAcceso(this.value.trim());
+    this.value = "";
+    eco(leerAcceso() ? "clave de acceso guardada en este navegador" : "clave de acceso borrada");
+  });
+  el("btn-recomprobar").addEventListener("click", function(){
+    servidorIA.consultado = false; pintarAjustes();
+    comprobarServidor().then(function(){ pintarTodo(); });
   });
   el("btn-probar").addEventListener("click", function(){
-    if(!hayClave()) return eco("escribe la clave y pulsa intro primero");
     el("ia-eco").textContent = "// probando…";
     el("ia-eco").style.color = "var(--dim)";
-    llamarIA([{role:"user", content:[{type:"text", text:"Responde solo: ok"}]}], 16)
-      .then(function(){
-        el("ia-eco").textContent = "// la clave funciona con " + S.ia.modelo;
+    llamarIA([{role:"user", content:"Responde solo con la palabra: ok"}], 16)
+      .then(function(r){
+        el("ia-eco").textContent = "// conexión correcta · respondió " + ((r && r.model) || S.ia.modelo);
         el("ia-eco").style.color = "var(--green)";
       })
       .catch(function(e){
@@ -2623,6 +2661,8 @@ var listo = function(){
 // así no se añade espera. Si falla, se queda el último precio guardado y la
 // página lo dice: nunca se bloquea el arranque por una petición de red.
 var pintado = false;
+// Se le pregunta al servidor si tiene clave mientras corre la barra de carga.
+comprobarServidor().then(function(){ if(pintado) pintarTodo(); });
 function arrancar(){
   if(pintado) return;
   pintado = true;

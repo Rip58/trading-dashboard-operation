@@ -125,13 +125,13 @@ tipo `diff` para los resultados. Los colores son tokens (`--green` positivo,
 soporte), nunca nombres de color sueltos. Toda animación respeta
 `prefers-reduced-motion`.
 
-## Análisis con IA (opcional)
+## Análisis con IA (Abacus RouteLLM)
 
-Sin clave, la app no mira las capturas: las guarda y las muestra para que las
-leas tú, y todo el cálculo sale del sesgo, los niveles y el rango que
+Sin servidor, la app no mira las capturas: las guarda y las muestra para que
+las leas tú, y todo el cálculo sale del sesgo, los niveles y el rango que
 introduces, más el precio de Binance.
 
-Con una clave de Anthropic en **ajustes**, `analizar con IA` hace dos llamadas:
+Con la función desplegada, `analizar con IA` hace dos llamadas:
 
 1. **Lee las cuatro capturas** y devuelve, por temporalidad, el sesgo y una
    nota con los precios que lo justifican, más los niveles que distinga. La app
@@ -141,23 +141,34 @@ Con una clave de Anthropic en **ajustes**, `analizar con IA` hace dos llamadas:
 
 La valoración aparece bajo las estrategias y se copia con el plan.
 
-**Sobre la clave.** Se guarda en el `localStorage` de tu navegador, aparte del
-resto del estado a propósito, para que no pueda colarse en el JSON que copia el
-plan. Viaja solo a la API de Anthropic: ni a esta web ni a ningún servidor
-intermedio. Pero está en el cliente, así que cualquier extensión que tengas
-instalada puede leerla — usa una clave con límite de gasto. La llamada directa
-desde el navegador requiere la cabecera
-`anthropic-dangerous-direct-browser-access`, que se llama así justamente por
-esto.
+### La clave nunca llega al navegador
 
-La alternativa sería una función en el servidor que guardase la clave, pero
-como el despliegue es público, cualquiera con la URL gastaría de tu cuenta.
-Para una herramienta personal, la clave en tu propio navegador es el menor de
-los dos males.
+`api/analizar.js` es una función de Vercel que hace de puente: el navegador le
+manda los mensajes, ella les pone la clave y llama a
+[RouteLLM](https://routellm.abacus.ai/v1), que es compatible con OpenAI. La
+clave vive solo en las variables de entorno.
 
-Cada análisis cuesta dinero de tu cuenta. El modelo se elige en ajustes.
-Dentro del artefacto de claude.ai no funciona: su CSP bloquea las peticiones a
-dominios externos.
+Variables en **Vercel → Settings → Environment Variables**:
+
+| Variable | Obligatoria | Para qué |
+|---|---|---|
+| `ABACUS_API_KEY` | sí | La clave de RouteLLM. |
+| `DASHBOARD_CLAVE` | no, pero léete lo de abajo | Contraseña de acceso a la función. |
+| `ABACUS_MODELO` | no | Modelo por defecto. Si no, `route-llm`. |
+| `ABACUS_URL` | no | Otro endpoint, si Abacus cambia de ruta. |
+
+**El despliegue es público, y ahí está el problema.** Sin `DASHBOARD_CLAVE`,
+cualquiera que conozca la URL puede pulsar el botón y gastar tu cuota de
+Abacus. Ponla: es una contraseña que te inventas, la escribes una vez en
+ajustes y se queda en tu navegador. La app te avisa en rojo mientras no esté.
+La alternativa es activar Deployment Protection en Vercel, que pide iniciar
+sesión para todo.
+
+`route-llm` deja que Abacus elija el modelo según el prompt; puedes forzar uno
+escribiendo su nombre en ajustes. La respuesta dice a cuál enrutó.
+
+Cada análisis consume tu cuota. En un fichero local o dentro del artefacto de
+claude.ai no hay servidor, así que el botón queda desactivado y lo dice.
 
 ## Móvil
 
