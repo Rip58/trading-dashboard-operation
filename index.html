@@ -89,7 +89,21 @@ button,input,select,textarea{font-family:var(--mono); font-size:12px}
 .badge{display:inline-block; font-size:9px; padding:1px 4px; border-radius:2px; border:1px solid var(--border); color:var(--dim2); letter-spacing:.3px}
 .sep{height:1px; background:var(--border); margin:10px 0}
 
-/* ---------- barra superior de acciones ---------- */
+/* ---------- ajustes e IA ---------- */
+.aj-grid{display:grid; grid-template-columns:1fr 200px; gap:12px; align-items:start}
+@media (max-width:620px){ .aj-grid{grid-template-columns:1fr} }
+.ia-caja{border:1px solid var(--violet); border-radius:2px; background:rgba(167,139,250,.05);
+  padding:10px; margin-top:10px; display:flex; flex-direction:column; gap:6px}
+.ia-cab{display:flex; align-items:baseline; gap:8px; flex-wrap:wrap}
+.ia-ver{font-size:13px; font-weight:700}
+.ia-txt{font-size:11px; color:var(--dim2); line-height:1.55}
+.ia-riesgos{margin:0; padding-left:16px; font-size:11px; color:var(--dim); line-height:1.6}
+.ia-pie{font-size:10px; color:var(--dim)}
+.girando{display:inline-block; animation:v6Giro 1s steps(4) infinite}
+@keyframes v6Giro{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){ .girando{animation:none} }
+
+/* ---------- barra superior de acciones ---------- *//* ---------- barra superior de acciones ---------- */
 .barra-sup{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:12px;
   padding-bottom:10px; border-bottom:1px solid var(--border)}
 .barra-sup .der-sup{margin-left:auto; font-size:11px; color:var(--dim)}
@@ -326,6 +340,7 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
   <div class="barra-sup">
     <button class="caja-btn" id="btn-nuevo">nuevo análisis</button>
     <button class="cmd" id="btn-ultimo" hidden>[<b>ver el último análisis</b>]</button>
+    <button class="cmd" id="btn-ajustes">[<b>ajustes</b>]</button>
     <span class="der-sup" id="eco-sup"></span>
   </div>
 
@@ -362,6 +377,8 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
       <div class="rejilla-tf" id="rejilla-tf"></div>
       <div class="nota-activa" id="nota-activa"></div>
       <div class="fila" style="margin-top:8px">
+        <button class="cmd" id="btn-ia">[<b>analizar con IA</b>]</button>
+        <span style="color:var(--dim)">·</span>
         <button class="cmd" id="btn-limpiar-img">[<b>quitar todas</b>]</button>
         <span style="color:var(--dim);font-size:11px">// las capturas se guardan en este navegador, no salen de aquí</span>
       </div>
@@ -423,6 +440,7 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
     <div class="com">// cuatro formas de leer los mismos niveles — cada una guarda su operación con la hora</div>
     <div class="cuerpo">
       <div class="rejilla-est" id="rejilla-est"></div>
+      <div id="ia-valoracion"></div>
       <div class="fila" style="margin-top:8px">
         <button class="cmd" id="btn-calc-todas">[<b>calcular las cuatro</b>]</button>
         <span style="color:var(--dim)">·</span>
@@ -544,6 +562,39 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
   </section>
 
   </div><!-- /#analisis -->
+
+  <!-- ============ AJUSTES ============ -->
+  <section class="sec" id="sec-ajustes">
+    <div class="sec-cab">
+      <h2 class="sec-tit"><button type="button" class="plegar" data-plegar="ajustes" aria-expanded="false"
+        aria-controls="cuerpo-ajustes"><span class="tri" style="color:var(--dim2)">▸</span>ajustes</button></h2>
+      <span class="der" id="ia-estado">sin clave</span></div>
+    <div class="com">// una clave de Anthropic aquí y la IA lee las capturas por ti</div>
+    <div class="cuerpo" id="cuerpo-ajustes">
+      <div class="aj-grid">
+        <div>
+          <label class="lbl" for="i-clave">clave de API de Anthropic</label>
+          <input id="i-clave" class="inp" type="password" autocomplete="off" spellcheck="false"
+                 placeholder="sk-ant-..." aria-describedby="aviso-clave">
+        </div>
+        <div>
+          <span class="lbl">modelo</span>
+          <div class="sel" id="sel-modelo"></div>
+        </div>
+      </div>
+      <div class="fila" style="margin-top:8px">
+        <button class="cmd" id="btn-probar">[<b>probar la clave</b>]</button>
+        <span style="color:var(--dim)">·</span>
+        <button class="cmd" id="btn-borrar-clave">[<b>borrar la clave</b>]</button>
+        <span id="ia-eco" style="font-size:11px"></span>
+      </div>
+      <div id="aviso-clave" class="aviso amb" style="margin-top:10px">
+        // la clave se queda en este navegador y viaja solo a la API de Anthropic — ni a esta web ni a nadie más.<br>
+        // aun así, cualquier extensión que tengas instalada puede leerla: usa una clave con límite de gasto.<br>
+        // cada análisis cuesta dinero de tu cuenta. dentro del artefacto de claude.ai no funciona, solo en la app desplegada.
+      </div>
+    </div>
+  </section>
 </div>
 
 <div class="pie" id="pie" hidden>
@@ -738,6 +789,83 @@ function precioDeMercado(){
   return false;
 }
 
+/* ================= análisis con IA =================
+   La clave se guarda aparte del resto del estado, a propósito: así no puede
+   colarse en el JSON que copia el botón del plan ni en ningún volcado.
+
+   La llamada sale del navegador directamente a Anthropic. Eso exige la
+   cabecera anthropic-dangerous-direct-browser-access, que se llama así porque
+   la clave vive en el cliente: es aceptable para una herramienta personal con
+   una clave limitada, y no lo es para nada compartido. La alternativa sería
+   una función en el servidor que guarde la clave, pero entonces cualquiera con
+   la URL gastaría de tu cuenta. */
+var CLAVE_LS = "tdo-clave-anthropic";
+var MODELOS = [
+  {id:"claude-opus-5",   nom:"Opus 5",   coste:"el más capaz · $5 / $25 por millón"},
+  {id:"claude-sonnet-5", nom:"Sonnet 5", coste:"equilibrado · $2 / $10 por millón"},
+  {id:"claude-haiku-4-5",nom:"Haiku 4.5",coste:"el más barato · $1 / $5 por millón"}
+];
+
+function leerClave(){
+  try{ return localStorage.getItem(CLAVE_LS) || ""; }catch(e){ return ""; }
+}
+function guardarClave(v){
+  try{ v ? localStorage.setItem(CLAVE_LS, v) : localStorage.removeItem(CLAVE_LS); }catch(e){}
+}
+function hayClave(){ return leerClave().trim().length > 10; }
+
+// Una captura guardada es "data:image/jpeg;base64,XXX"; la API quiere las dos
+// mitades por separado.
+function bloqueImagen(dataUrl){
+  var m = /^data:(image\/[a-z+]+);base64,(.+)$/i.exec(dataUrl || "");
+  if(!m) return null;
+  return {type:"image", source:{type:"base64", media_type:m[1], data:m[2]}};
+}
+
+function llamarIA(mensajes, maxTokens){
+  var clave = leerClave().trim();
+  if(!clave) return Promise.reject(new Error("no hay clave guardada"));
+  return fetch("https://api.anthropic.com/v1/messages", {
+    method:"POST",
+    headers:{
+      "content-type":"application/json",
+      "x-api-key":clave,
+      "anthropic-version":"2023-06-01",
+      "anthropic-dangerous-direct-browser-access":"true"
+    },
+    body: JSON.stringify({
+      model: S.ia.modelo,
+      max_tokens: maxTokens || 4000,
+      messages: mensajes
+    })
+  }).then(function(r){
+    return r.json().then(function(j){
+      if(!r.ok){
+        var det = j && j.error && j.error.message ? j.error.message : "HTTP " + r.status;
+        throw new Error(det);
+      }
+      return j;
+    }, function(){ throw new Error("respuesta ilegible (HTTP " + r.status + ")"); });
+  });
+}
+
+function textoDe(resp){
+  return (resp.content || []).filter(function(b){ return b.type === "text"; })
+    .map(function(b){ return b.text; }).join("\n");
+}
+
+// El modelo devuelve JSON, a veces envuelto en un bloque de código. Se pide
+// JSON en el prompt en lugar de con esquema para no depender de una forma de
+// petición que no puedo probar contra la API real desde aquí.
+function jsonDe(txt){
+  var t = String(txt || "").trim();
+  var cerca = t.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if(cerca) t = cerca[1].trim();
+  var i = t.indexOf("{"), f = t.lastIndexOf("}");
+  if(i < 0 || f < i) throw new Error("la respuesta no traía JSON");
+  return JSON.parse(t.slice(i, f + 1));
+}
+
 /* ================= estado inicial =================
    Sembrado con la lectura de las cuatro capturas de BTC/USDT del 30-ago
    (1D / 4H / 1H / 15m). Todo es editable. */
@@ -766,7 +894,8 @@ function estadoBase(){
     riesgo: {capital:5000, pct:1, apal:5},
     check: {},
     verTodos: false,
-    plegado: {niveles:true, mapa:false}   // los niveles se consultan de vez en cuando
+    plegado: {niveles:true, mapa:false, ajustes:true},
+    ia: {modelo:"claude-opus-5", resumen:null, valoracion:null, cuando:null}
   };
 }
 var S = estadoBase();
@@ -847,6 +976,13 @@ function cargar(){
     if(d.plegado && typeof d.plegado === "object"){
       S.plegado.niveles = !!d.plegado.niveles;
       S.plegado.mapa = !!d.plegado.mapa;
+      if(typeof d.plegado.ajustes === "boolean") S.plegado.ajustes = d.plegado.ajustes;
+    }
+    if(d.ia && typeof d.ia === "object"){
+      if(MODELOS.some(function(m){ return m.id === d.ia.modelo; })) S.ia.modelo = d.ia.modelo;
+      S.ia.resumen = d.ia.resumen || null;
+      S.ia.valoracion = d.ia.valoracion || null;
+      S.ia.cuando = d.ia.cuando || null;
     }
   }catch(e){ /* estado corrupto: se queda el de fábrica */ }
 }
@@ -1393,6 +1529,196 @@ function initArrastre(){
   });
 }
 
+/* ================= los dos pasos del análisis =================
+   Paso 1: la IA mira las cuatro capturas y devuelve sesgo, nota y niveles.
+   Paso 2: con eso ya aplicado, la app calcula la estrategia y le pide a la IA
+   que valore la operación resultante. Separarlo importa: el segundo paso
+   necesita números que solo existen después del primero. */
+
+function pasoLeerGraficos(){
+  var imgs = [], etiquetas = [];
+  S.tfs.forEach(function(t){
+    var b = bloqueImagen(t.img);
+    if(b){ imgs.push(b); etiquetas.push(t.label); }
+  });
+  if(imgs.length < 1) return Promise.reject(new Error("no hay capturas que analizar"));
+
+  var instruccion =
+    "Eres un analista técnico. Te paso " + imgs.length + " capturas de gráficos del mismo activo, " +
+    "en este orden de temporalidad: " + etiquetas.join(", ") + ".\n\n" +
+    "Para CADA captura, en el mismo orden, dime:\n" +
+    "- la temporalidad que veas escrita en el gráfico (si no coincide con la que te he dicho, pon la que veas)\n" +
+    "- el sesgo, como número entero: -2 bajista fuerte, -1 bajista, 0 neutro, 1 alcista, 2 alcista fuerte\n" +
+    "- una nota de una frase, concreta, con los precios que la justifican\n\n" +
+    "Además, dame los niveles de soporte y resistencia que se lean con claridad en el conjunto " +
+    "(máximo 12, ordenados de mayor a menor precio), cada uno con la temporalidad donde mejor se aprecia.\n\n" +
+    "El activo que creo que es: " + S.activo + ". Precio actual: " + fmtP(S.precio) + ".\n" +
+    "Si alguna imagen no es un gráfico, o el activo no coincide, dilo en 'aviso'.\n\n" +
+    "Responde SOLO con este JSON, sin texto alrededor:\n" +
+    '{"activo":"","temporalidades":[{"temporalidad":"","sesgo":0,"nota":""}],' +
+    '"niveles":[{"precio":0,"tf":""}],"aviso":""}';
+
+  var contenido = [];
+  imgs.forEach(function(b, i){
+    contenido.push({type:"text", text:"Captura " + (i+1) + " — " + etiquetas[i] + ":"});
+    contenido.push(b);
+  });
+  contenido.push({type:"text", text:instruccion});
+
+  return llamarIA([{role:"user", content:contenido}], 3000).then(function(r){
+    var d = jsonDe(textoDe(r));
+    // Aplicar lo que ha leído
+    if(Array.isArray(d.temporalidades)){
+      d.temporalidades.slice(0, S.tfs.length).forEach(function(t, i){
+        if(!S.tfs[i].img) return;
+        if(isFinite(t.sesgo)) S.tfs[i].sesgo = clamp(Math.round(t.sesgo), -2, 2);
+        if(t.nota) S.tfs[i].nota = String(t.nota);
+        if(t.temporalidad) S.tfs[i].label = String(t.temporalidad).slice(0, 4);
+      });
+    }
+    if(Array.isArray(d.niveles) && d.niveles.length){
+      var nuevos = d.niveles
+        .filter(function(l){ return isFinite(l.precio) && l.precio > 0; })
+        .map(function(l){ return {p:+l.precio, tf:String(l.tf || "")}; })
+        .sort(function(a,b){ return b.p - a.p; });
+      if(nuevos.length) S.niveles = nuevos.slice(0, 14);
+    }
+    S.ia.resumen = {
+      activo: d.activo ? String(d.activo) : null,
+      aviso: d.aviso ? String(d.aviso) : null,
+      uso: r.usage || null
+    };
+    S.ia.cuando = new Date().toISOString();
+    return d;
+  });
+}
+
+function pasoValorarOperacion(){
+  var o = opActiva(), m = metricas(), c = confluencia(), rc = riesgoCalc();
+  var est = ESTRATEGIAS.filter(function(e){ return e.id === o.estrategia; })[0];
+
+  var ctx =
+    "Activo: " + S.activo + " · precio " + fmtP(S.precio) + "\n" +
+    "Sesgo por temporalidad: " + S.tfs.map(function(t){
+      return t.label + " " + nombreSesgo(t.sesgo) + " (" + t.nota + ")"; }).join(" | ") + "\n" +
+    "Sesgo ponderado: " + (c.dir === "long" ? "LARGO" : c.dir === "short" ? "CORTO" : "SIN SESGO") +
+      " (" + c.score + ")\n" +
+    "Niveles: " + S.niveles.map(function(l){ return fmtP(l.p) + (l.tf ? "/" + l.tf : ""); }).join(", ") + "\n\n" +
+    "Operación propuesta" + (est ? " por la estrategia \"" + est.nombre + "\" (" + est.horizonte + ", " + est.lema + ")" : " a mano") + ":\n" +
+    "- dirección " + (o.dir === "long" ? "largo" : "corto") + "\n" +
+    "- entrada " + fmtP(o.entrada) + " · stop " + fmtP(o.stop) + "\n" +
+    "- objetivos " + fmtP(o.tp1) + " / " + fmtP(o.tp2) + " / " + fmtP(o.tp3) + "\n" +
+    "- R:R al primer objetivo " + (isFinite(m.rr1) ? fmt(m.rr1, 2) : "—") +
+      " · recorrido al stop " + (isFinite(m.pctStop) ? fmt(m.pctStop, 2) + " %" : "—") + "\n" +
+    "- riesgo " + fmt(rc.importe) + " de una cuenta de " + fmt(S.riesgo.capital) + "\n\n" +
+    "Valórala como lo haría un gestor de riesgo: ¿tiene sentido con lo que muestran los gráficos? " +
+    "Sé concreto y no te limites a repetir los números. Si la operación es mala, dilo claramente.\n\n" +
+    "Responde SOLO con este JSON:\n" +
+    '{"veredicto":"a favor|con matices|en contra","confianza":"alta|media|baja",' +
+    '"razon":"dos o tres frases","riesgos":["riesgo concreto"],"ajuste":"un cambio que la mejoraría, o vacío"}';
+
+  return llamarIA([{role:"user", content:[{type:"text", text:ctx}]}], 1500).then(function(r){
+    var d = jsonDe(textoDe(r));
+    S.ia.valoracion = {
+      veredicto: String(d.veredicto || "").toLowerCase(),
+      confianza: String(d.confianza || ""),
+      razon: String(d.razon || ""),
+      riesgos: Array.isArray(d.riesgos) ? d.riesgos.map(String).slice(0, 5) : [],
+      ajuste: String(d.ajuste || ""),
+      operacion: o.nombre,
+      cuando: new Date().toISOString()
+    };
+    return d;
+  });
+}
+
+var iaOcupada = false;
+var iaTrabajando = null;    // texto del paso en curso
+var iaError = null;         // último fallo, hasta el siguiente intento
+
+function analizarConIA(){
+  if(iaOcupada) return;
+  if(!hayClave()){
+    S.plegado.ajustes = false; pintarPlegados();
+    el("sec-ajustes").scrollIntoView({behavior: reducido() ? "auto" : "smooth", block:"start"});
+    eco("primero guarda tu clave de API en ajustes");
+    return;
+  }
+  iaOcupada = true;
+  iaError = null;
+  S.ia.valoracion = null;
+  iaTrabajando = "leyendo las cuatro capturas…";
+  pintarIA();
+  pasoLeerGraficos()
+    .then(function(){
+      guardar(); iaTrabajando = "valorando la operación…"; pintarTodo();
+      return pasoValorarOperacion();
+    })
+    .then(function(){
+      iaOcupada = false; iaTrabajando = null;
+      guardar(); pintarTodo();
+      eco("análisis completado");
+    })
+    .catch(function(e){
+      iaOcupada = false; iaTrabajando = null;
+      iaError = e.message || "algo falló";
+      guardar(); pintarTodo();
+    });
+}
+
+function pintarIA(){
+  var c = el("ia-valoracion"), trabajando = iaTrabajando, error = iaError;
+  if(trabajando){
+    c.innerHTML = '<div class="ia-caja"><div class="ia-cab">' +
+      '<span class="girando" style="color:var(--violet)">▚</span>' +
+      '<span class="ia-ver" style="color:var(--violet)">' + esc(trabajando) + "</span></div>" +
+      '<div class="ia-pie">// no cierres la página</div></div>';
+    return;
+  }
+  if(error){
+    c.innerHTML = '<div class="aviso" style="margin-top:10px">// la IA no pudo responder: ' + esc(error) + "</div>";
+    return;
+  }
+  var v = S.ia.valoracion;
+  if(!v){ c.innerHTML = ""; return; }
+  var col = /en contra/.test(v.veredicto) ? "var(--red)"
+          : /matices/.test(v.veredicto) ? "var(--amber)" : "var(--green)";
+  c.innerHTML =
+    '<div class="ia-caja"><div class="ia-cab">' +
+      '<span class="ia-ver" style="color:' + col + '">' + esc(v.veredicto || "—") + "</span>" +
+      '<span class="badge">confianza ' + esc(v.confianza || "—") + "</span>" +
+      '<span class="badge">' + esc(v.operacion || "") + "</span></div>" +
+    '<div class="ia-txt">' + esc(v.razon) + "</div>" +
+    (v.riesgos.length ? "<ul class=\"ia-riesgos\">" + v.riesgos.map(function(r){
+        return "<li>" + esc(r) + "</li>"; }).join("") + "</ul>" : "") +
+    (v.ajuste ? '<div class="ia-txt" style="color:var(--amber)">// ' + esc(v.ajuste) + "</div>" : "") +
+    '<div class="ia-pie">// lo dice un modelo mirando tus capturas: contrástalo, no lo obedezcas</div></div>';
+}
+
+function pintarAjustes(){
+  var items = MODELOS.map(function(m){
+    return {v:m.id, btn: esc(m.nom),
+            html:'<span style="display:inline-block;min-width:78px">' + esc(m.nom) + "</span>" +
+                 '<span style="color:var(--dim)">' + esc(m.coste) + "</span>"};
+  });
+  pintarSelect("sel-modelo", items, S.ia.modelo, function(v){
+    S.ia.modelo = v; guardar(); pintarAjustes();
+  });
+  var r = S.ia.resumen;
+  el("ia-estado").textContent = !hayClave() ? "sin clave"
+    : S.ia.cuando ? "último análisis " + new Date(S.ia.cuando).toLocaleTimeString("es-ES", {hour:"2-digit", minute:"2-digit"})
+    : "clave guardada";
+  var b = el("btn-ia");
+  var listas = S.tfs.filter(function(t){ return t.img; }).length;
+  b.innerHTML = "[<b>" + (hayClave() ? "analizar con IA" : "analizar con IA (falta clave)") + "</b>]";
+  b.disabled = listas === 0 || iaOcupada;
+  // Aviso de la lectura: activo distinto del elegido, o imagen que no es gráfico.
+  var extra = el("aviso-activo");
+  if(r && r.aviso){
+    extra.innerHTML = '<div class="aviso amb">// la IA avisa: ' + esc(r.aviso) + "</div>" + extra.innerHTML;
+  }
+}
+
 /* ================= render: estrategias =================
    Cada estrategia se evalúa contra lo que hay ahora en pantalla y devuelve, o
    bien la operación que propondría, o bien el motivo por el que no es momento
@@ -1728,6 +2054,14 @@ function textoPlan(){
   CHECKS.forEach(function(ch){ L.push("    " + (checkEstado(ch) ? "[x] " : "[ ] ") + ch.t); });
   L.push("");
   if(opActiva().nota) L.push("  razón         " + opActiva().nota);
+  if(S.ia.valoracion){
+    var v = S.ia.valoracion;
+    L.push("");
+    L.push("  ia            " + v.veredicto + " (confianza " + v.confianza + ")");
+    L.push("                " + v.razon);
+    v.riesgos.forEach(function(x){ L.push("                · " + x); });
+    if(v.ajuste) L.push("                ajuste: " + v.ajuste);
+  }
   L.push("");
   L.push("  notas");
   S.tfs.forEach(function(t){ if(t.nota) L.push("    " + t.label + "  " + t.nota); });
@@ -1756,7 +2090,7 @@ function pintarVista(){
 }
 
 function pintarPlegados(){
-  [["niveles","sec-niveles"], ["mapa","sec-mapa"]].forEach(function(par){
+  [["niveles","sec-niveles"], ["mapa","sec-mapa"], ["ajustes","sec-ajustes"]].forEach(function(par){
     var plegada = !!S.plegado[par[0]];
     el(par[1]).classList.toggle("plegada", plegada);
     var b = document.querySelector('.plegar[data-plegar="' + par[0] + '"]');
@@ -1794,6 +2128,8 @@ function pintarTodo(){
   pintarValidacion();
   pintarPlan();
   pintarPlegados();
+  pintarIA();
+  pintarAjustes();
   pintarVista();
   // No pisar el campo mientras se escribe en él.
   if(document.activeElement !== el("i-precio")) el("i-precio").value = fmtP(S.precio);
@@ -1976,6 +2312,39 @@ function conectar(){
     guardar(); pintarTodo();
   });
 
+  /* --- ajustes e IA --- */
+  el("btn-ajustes").addEventListener("click", function(){
+    S.plegado.ajustes = false;
+    guardar(); pintarPlegados();
+    el("sec-ajustes").scrollIntoView({behavior: reducido() ? "auto" : "smooth", block:"start"});
+    el("i-clave").focus();
+  });
+  el("i-clave").addEventListener("change", function(){
+    guardarClave(this.value.trim());
+    this.value = "";                        // no dejarla a la vista
+    pintarAjustes();
+    eco(hayClave() ? "clave guardada en este navegador" : "clave borrada");
+  });
+  el("btn-borrar-clave").addEventListener("click", function(){
+    guardarClave(""); el("i-clave").value = "";
+    pintarAjustes(); eco("clave borrada de este navegador");
+  });
+  el("btn-probar").addEventListener("click", function(){
+    if(!hayClave()) return eco("escribe la clave y pulsa intro primero");
+    el("ia-eco").textContent = "// probando…";
+    el("ia-eco").style.color = "var(--dim)";
+    llamarIA([{role:"user", content:[{type:"text", text:"Responde solo: ok"}]}], 16)
+      .then(function(){
+        el("ia-eco").textContent = "// la clave funciona con " + S.ia.modelo;
+        el("ia-eco").style.color = "var(--green)";
+      })
+      .catch(function(e){
+        el("ia-eco").textContent = "// " + (e.message || "no se pudo conectar");
+        el("ia-eco").style.color = "var(--red)";
+      });
+  });
+  el("btn-ia").addEventListener("click", analizarConIA);
+
   /* --- plegar secciones --- */
   document.addEventListener("click", function(e){
     var b = e.target.closest(".plegar");
@@ -1990,7 +2359,9 @@ function conectar(){
   /* --- vistas --- */
   el("btn-ultimo").addEventListener("click", abrirAnalisis);
   el("btn-nuevo").addEventListener("click", function(){
+    var modelo = S.ia.modelo;               // la clave y el modelo no se tocan
     S = estadoBase();
+    S.ia.modelo = modelo;
     S.atr = null;
     try{ localStorage.removeItem(LS); }catch(e){}
     S.tfs.forEach(function(t){ t.img = null; t.activo = null; });

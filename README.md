@@ -125,15 +125,39 @@ tipo `diff` para los resultados. Los colores son tokens (`--green` positivo,
 soporte), nunca nombres de color sueltos. Toda animación respeta
 `prefers-reduced-motion`.
 
-## Lo que la app NO hace
+## Análisis con IA (opcional)
 
-No analiza las capturas. No hay lectura de gráficos, ni OCR, ni modelo de
-visión: las cuatro imágenes se guardan y se muestran para que las mires tú.
-Todo lo que calcula sale de lo que introduces —el sesgo de cada temporalidad,
-los niveles, el rango de vela— más el precio de Binance. Las estrategias son
-aritmética sobre esos números. Es una calculadora disciplinada, no un analista:
-el criterio lo pones tú, y lo que aporta es no dejarte saltar pasos ni mentirte
-con el tamaño de posición.
+Sin clave, la app no mira las capturas: las guarda y las muestra para que las
+leas tú, y todo el cálculo sale del sesgo, los niveles y el rango que
+introduces, más el precio de Binance.
+
+Con una clave de Anthropic en **ajustes**, `analizar con IA` hace dos llamadas:
+
+1. **Lee las cuatro capturas** y devuelve, por temporalidad, el sesgo y una
+   nota con los precios que lo justifican, más los niveles que distinga. La app
+   lo aplica y recalcula la confluencia y las cuatro estrategias.
+2. **Valora la operación** que sale de ahí —a favor, con matices o en contra—
+   con su razón, los riesgos concretos y un ajuste que la mejoraría.
+
+La valoración aparece bajo las estrategias y se copia con el plan.
+
+**Sobre la clave.** Se guarda en el `localStorage` de tu navegador, aparte del
+resto del estado a propósito, para que no pueda colarse en el JSON que copia el
+plan. Viaja solo a la API de Anthropic: ni a esta web ni a ningún servidor
+intermedio. Pero está en el cliente, así que cualquier extensión que tengas
+instalada puede leerla — usa una clave con límite de gasto. La llamada directa
+desde el navegador requiere la cabecera
+`anthropic-dangerous-direct-browser-access`, que se llama así justamente por
+esto.
+
+La alternativa sería una función en el servidor que guardase la clave, pero
+como el despliegue es público, cualquiera con la URL gastaría de tu cuenta.
+Para una herramienta personal, la clave en tu propio navegador es el menor de
+los dos males.
+
+Cada análisis cuesta dinero de tu cuenta. El modelo se elige en ajustes.
+Dentro del artefacto de claude.ai no funciona: su CSP bloquea las peticiones a
+dominios externos.
 
 ## Móvil
 
