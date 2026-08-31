@@ -162,24 +162,14 @@ button,input,select,textarea{font-family:var(--mono); font-size:12px}
 
 /* ---------- niveles ---------- */
 .tabla{width:100%; overflow-x:auto}
-.niv-fila{display:grid; grid-template-columns:106px 62px 1fr 56px 26px; gap:6px; align-items:center; margin-bottom:4px; min-width:420px}
-/* Por debajo de 620px el min-width escondía la temporalidad y la papelera
-   fuera de la pantalla, sin indicio de que hubiese scroll lateral. */
-@media (max-width:620px){
-  .niv-fila{grid-template-columns:1fr 62px 34px; min-width:0; gap:5px; margin-bottom:8px;
-    grid-template-areas:"precio tipo borrar" "etiqueta etiqueta tf"}
-  .niv-fila > :nth-child(1){grid-area:precio}
-  .niv-fila > :nth-child(2){grid-area:tipo}
-  .niv-fila > :nth-child(3){grid-area:etiqueta}
-  .niv-fila > :nth-child(4){grid-area:tf}
-  .niv-fila > :nth-child(5){grid-area:borrar}
-  .niv-cab{display:none}
-}
-.niv-cab{font-size:10px; text-transform:uppercase; letter-spacing:.3px; color:var(--dim); margin-bottom:4px}
-.tipo-tog{display:grid; grid-template-columns:1fr 1fr; gap:2px}
-.tipo-btn{padding:4px 0; border-radius:2px; border:1px solid var(--border); background:var(--sunk); color:var(--dim); cursor:pointer; font-size:11px; font-weight:700}
-.tipo-btn.on[data-t="R"]{border-color:var(--orange); color:var(--orange); background:rgba(224,121,60,.12)}
-.tipo-btn.on[data-t="S"]{border-color:var(--blue); color:var(--blue); background:rgba(90,169,230,.12)}
+/* Una línea por nivel: el precio, su temporalidad y poco más. El tipo se
+   deduce de la posición respecto al precio, así que es una letra de color, no
+   un control. */
+.niv-fila{display:grid; grid-template-columns:18px 1fr 62px 34px; gap:6px; align-items:center;
+  margin-bottom:4px; border-left:2px solid var(--border); padding-left:7px}
+.niv-tipo{font-size:11px; font-weight:700; text-align:center}
+.niv-tf{text-align:center}
+@media (max-width:620px){ .niv-fila{gap:5px; margin-bottom:5px} }
 .borrar{background:none; border:1px solid var(--border); border-radius:2px; color:var(--dim); cursor:pointer; padding:4px 0; line-height:1}
 .borrar:hover{color:var(--red); border-color:var(--red)}
 
@@ -284,7 +274,6 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
   .tf-nota{padding:9px 8px}
   .sel-btn{padding:10px 8px}
   .sel-fila{padding:11px 8px}
-  .tipo-btn{padding:11px 0}
   .borrar{padding:11px 0}
   .chk{padding:11px 8px}
   .est-usar{padding:13px 0}
@@ -402,16 +391,15 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
   <section class="sec" id="sec-niveles">
     <div class="sec-cab"><span class="tri" style="color:var(--blue)">▸</span><h2>niveles</h2>
       <span class="der" id="niv-cuenta">0 niveles</span></div>
-    <div class="com">// los precios donde el gráfico ya reaccionó — la entrada y el stop salen de aquí</div>
+    <div class="com">// los precios donde el gráfico ya reaccionó</div>
     <div class="cuerpo">
       <div class="tabla">
-        <div class="niv-fila niv-cab"><span>precio</span><span>tipo</span><span>etiqueta</span><span>tf</span><span></span></div>
         <div id="niv-lista"></div>
       </div>
       <div class="fila" style="margin-top:6px">
         <button class="cmd" id="btn-add-niv">[<b>+ nivel</b>]</button>
         <span style="color:var(--dim)">·</span>
-        <span style="font-size:11px;color:var(--dim)"><span style="color:var(--orange)">R</span> resistencia · <span style="color:var(--blue)">S</span> soporte</span>
+        <span style="font-size:11px;color:var(--dim)">// <span style="color:var(--orange)">R</span> sobre el precio · <span style="color:var(--blue)">S</span> por debajo</span>
       </div>
     </div>
   </section>
@@ -653,32 +641,80 @@ var SIMBOLOS = ["BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT","DOGEUSDT","AD
 
 var mercado = {};            // "BTC/USDT" -> {precio, cambio}
 var mercadoEstado = "sin consultar";   // texto que se enseña bajo el activo
+var mercadoHost = null;                // host que respondió la última vez
 
+/* Binance publica los mismos datos en varios hosts. Si uno está bloqueado
+   —por la red, el operador o un bloqueador del navegador— los demás suelen
+   seguir respondiendo, así que se prueban en orden en vez de darse por
+   vencido con el primero. data-api.binance.vision va delante porque es el
+   host público de datos de mercado y es el que menos restricciones tiene. */
 function aPar(sim){ return sim.replace(/USDT$/, "") + "/USDT"; }
+
+var HOSTS = [
+  "https://data-api.binance.vision",
+  "https://api.binance.com",
+  "https://api1.binance.com",
+  "https://api4.binance.com"
+];
+
+// fetch con límite de tiempo: un host bloqueado puede quedarse colgado.
+function pedir(url, ms){
+  if(typeof AbortController === "undefined") return fetch(url, {cache:"no-store"});
+  var ctl = new AbortController();
+  var t = setTimeout(function(){ ctl.abort(); }, ms || 6000);
+  return fetch(url, {cache:"no-store", signal:ctl.signal})
+    .then(function(r){ clearTimeout(t); return r; },
+          function(e){ clearTimeout(t); throw e; });
+}
 
 function pedirMercado(){
   mercadoEstado = "consultando Binance…";
   if(typeof renderActivo === "function") renderActivo();
-  var url = "https://api.binance.com/api/v3/ticker/24hr?symbols=" + encodeURIComponent(JSON.stringify(SIMBOLOS));
-  return fetch(url, {cache:"no-store"})
-    .then(function(r){
-      if(!r.ok) throw new Error("Binance respondió " + r.status);
-      return r.json();
-    })
-    .then(function(datos){
-      if(!Array.isArray(datos)) throw new Error("respuesta inesperada");
-      datos.forEach(function(d){
-        var pr = parseFloat(d.lastPrice), cb = parseFloat(d.priceChangePercent);
-        if(isFinite(pr)) mercado[aPar(d.symbol)] = {precio:pr, cambio: isFinite(cb) ? cb : null};
-      });
-      var h = new Date();
-      mercadoEstado = "binance · " + String(h.getHours()).padStart(2,"0") + ":" + String(h.getMinutes()).padStart(2,"0");
-      return true;
-    })
-    .catch(function(e){
-      mercadoEstado = "sin conexión con Binance (" + e.message + "): escribe el precio a mano";
+  var cola = "/api/v3/ticker/24hr?symbols=" + encodeURIComponent(JSON.stringify(SIMBOLOS));
+  var fallos = [];
+
+  // Traduce el fallo a algo accionable en vez de al mensaje del navegador.
+  function motivo(e){
+    var m = (e && e.message) || "";
+    if(e && e.name === "AbortError") return "sin respuesta a tiempo";
+    if(/451/.test(m)) return "bloqueado por región";
+    if(/403/.test(m)) return "acceso denegado";
+    if(/429/.test(m)) return "demasiadas peticiones";
+    if(/^HTTP /.test(m)) return m;
+    return "no se pudo conectar";   // "Failed to fetch" / "Load failed"
+  }
+
+  function intentar(i){
+    if(i >= HOSTS.length){
+      var unicos = fallos.filter(function(v, k){ return fallos.indexOf(v) === k; });
+      mercadoEstado = "Binance no responde (" + HOSTS.length + " hosts · " +
+        unicos.join(" · ") + "). Escribe el precio a mano.";
       return false;
-    });
+    }
+    var host = HOSTS[i];
+    return pedir(host + cola, 6000)
+      .then(function(r){
+        if(!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      })
+      .then(function(datos){
+        if(!Array.isArray(datos)) throw new Error("respuesta inesperada");
+        datos.forEach(function(d){
+          var pr = parseFloat(d.lastPrice), cb = parseFloat(d.priceChangePercent);
+          if(isFinite(pr)) mercado[aPar(d.symbol)] = {precio:pr, cambio: isFinite(cb) ? cb : null};
+        });
+        var h = new Date();
+        mercadoHost = host.replace(/^https:\/\//, "");
+        mercadoEstado = mercadoHost + " · " +
+          String(h.getHours()).padStart(2,"0") + ":" + String(h.getMinutes()).padStart(2,"0");
+        return true;
+      })
+      .catch(function(e){
+        fallos.push(motivo(e));
+        return intentar(i + 1);      // el siguiente host de la lista
+      });
+  }
+  return intentar(0);
 }
 
 // Lleva el precio del par elegido al estado, si Binance lo ha devuelto.
@@ -702,17 +738,9 @@ function estadoBase(){
       {id:"m15", label:"15m", peso:10, sesgo:1,  img:null, nota:"Empuje con volumen hasta 78.900, aún sin cerrar por encima."}
     ],
     niveles: [
-      {p:81600, t:"R", n:"máximo del impulso", tf:"1D"},
-      {p:81200, t:"R", n:"techo del rango",    tf:"4H"},
-      {p:80300, t:"R", n:"resistencia intermedia", tf:"4H"},
-      {p:79400, t:"R", n:"resistencia menor",  tf:"4H"},
-      {p:78900, t:"R", n:"techo intradía",     tf:"1H"},
-      {p:78200, t:"S", n:"soporte intradía",   tf:"1H"},
-      {p:77960, t:"S", n:"mínimo del rango",   tf:"15m"},
-      {p:77400, t:"S", n:"soporte del rango",  tf:"4H"},
-      {p:76650, t:"S", n:"suelo del rango",    tf:"4H"},
-      {p:72000, t:"S", n:"origen del impulso", tf:"1D"},
-      {p:64500, t:"S", n:"base de consolidación", tf:"1D"}
+      {p:81600, tf:"1D"}, {p:81200, tf:"4H"}, {p:80300, tf:"4H"}, {p:79400, tf:"4H"},
+      {p:78900, tf:"1H"}, {p:78200, tf:"1H"}, {p:77960, tf:"15m"}, {p:77400, tf:"4H"},
+      {p:76650, tf:"4H"}, {p:72000, tf:"1D"}, {p:64500, tf:"1D"}
     ],
     ops: [{
       id:"manual", nombre:"Manual", estrategia:null, horizonte:null, fecha:null,
@@ -769,7 +797,7 @@ function cargar(){
     });
     if(Array.isArray(d.niveles)) S.niveles = d.niveles
       .filter(function(l){ return l && isFinite(l.p); })
-      .map(function(l){ return {p:+l.p, t:l.t === "R" ? "R" : "S", n:String(l.n||""), tf:String(l.tf||"")}; });
+      .map(function(l){ return {p:+l.p, tf:String(l.tf||"")}; });   // el tipo y la etiqueta ya no se guardan
     if(Array.isArray(d.ops) && d.ops.length){
       S.ops = d.ops.filter(function(o){ return o && o.id && isFinite(o.entrada); })
         .map(function(o){
@@ -812,6 +840,12 @@ var SESGOS = [
   {v: 1, c:"↑",  n:"alcista"},
   {v: 2, c:"↑↑", n:"alcista fuerte"}
 ];
+// Un nivel por encima del precio es resistencia y por debajo es soporte: no
+// hace falta que nadie lo marque, y así no se queda desfasado al moverse el
+// precio.
+function tipoNivel(l){ return l.p >= S.precio ? "R" : "S"; }
+function colorNivel(l){ return tipoNivel(l) === "R" ? "#E0793C" : "#5AA9E6"; }
+
 function colorSesgo(v){ return v > 0 ? "var(--green)" : v < 0 ? "var(--red)" : "var(--dim2)"; }
 function glifoSesgo(v){ for(var i=0;i<SESGOS.length;i++) if(SESGOS[i].v===v) return SESGOS[i].c; return "="; }
 function nombreSesgo(v){ for(var i=0;i<SESGOS.length;i++) if(SESGOS[i].v===v) return SESGOS[i].n; return "neutro"; }
@@ -1149,16 +1183,15 @@ function renderNiveles(){
   cont.innerHTML = "";
   S.niveles.forEach(function(l, i){
     var f = document.createElement("div");
+    var tp = tipoNivel(l);
     f.className = "niv-fila";
+    f.style.borderLeftColor = colorNivel(l);
     f.innerHTML =
+      '<span class="niv-tipo" style="color:' + colorNivel(l) + '" title="' +
+        (tp === "R" ? "resistencia" : "soporte") + '">' + tp + "</span>" +
       '<input class="inp num" data-niv="p" data-i="' + i + '" inputmode="decimal" value="' + fmtP(l.p) + '">' +
-      '<span class="tipo-tog">' +
-        '<button class="tipo-btn' + (l.t === "R" ? " on" : "") + '" data-t="R" data-i="' + i + '" title="resistencia">R</button>' +
-        '<button class="tipo-btn' + (l.t === "S" ? " on" : "") + '" data-t="S" data-i="' + i + '" title="soporte">S</button>' +
-      '</span>' +
-      '<input class="inp" data-niv="n" data-i="' + i + '" value="' + esc(l.n) + '" placeholder="etiqueta">' +
-      '<input class="inp" data-niv="tf" data-i="' + i + '" value="' + esc(l.tf) + '" placeholder="tf">' +
-      '<button class="borrar" data-borrar="' + i + '" aria-label="Borrar nivel">×</button>';
+      '<input class="inp niv-tf" data-niv="tf" data-i="' + i + '" value="' + esc(l.tf) + '" placeholder="tf">' +
+      '<button class="borrar" data-borrar="' + i + '" aria-label="Borrar el nivel ' + fmtP(l.p) + '">×</button>';
     cont.appendChild(f);
   });
   el("niv-cuenta").textContent = S.niveles.length + " niveles";
@@ -1232,16 +1265,11 @@ function renderMapa(){
   // --- niveles del gráfico ---
   S.niveles.forEach(function(l){
     if(l.p < d.min || l.p > d.max) return;
-    var py = y(l.p), col = l.t === "R" ? "#E0793C" : "#5AA9E6";
+    var py = y(l.p), col = colorNivel(l);
     g.appendChild(svgEl("line", {x1:pL, y1:py, x2:pR, y2:py, stroke:col, "stroke-width":1, "stroke-dasharray":"1 5", opacity:.75}));
     var t1 = svgEl("text", {x:pL+4, y:py-4, fill:col, "font-size":10, "font-family":"var(--mono)", opacity:.95});
-    t1.textContent = l.t + " " + fmtEje(l.p);
+    t1.textContent = tipoNivel(l) + " " + fmtEje(l.p) + (l.tf ? "  ·  " + l.tf : "");
     g.appendChild(t1);
-    if(W > 420){
-      var t2 = svgEl("text", {x:pL+4+72, y:py-4, fill:"#5C5C5C", "font-size":10, "font-family":"var(--mono)"});
-      t2.textContent = l.n + (l.tf ? "  ·  " + l.tf : "");
-      g.appendChild(t2);
-    }
   });
 
   // --- precio actual ---
@@ -1500,7 +1528,7 @@ function renderActivo(){
     guardar(); pintarTodo();
   });
   el("mercado-eco").textContent = "// " + mercadoEstado;
-  el("mercado-eco").style.color = /sin conexión|sin precio/.test(mercadoEstado) ? "var(--amber)" : "var(--dim)";
+  el("mercado-eco").style.color = /no responde|sin precio/.test(mercadoEstado) ? "var(--amber)" : "var(--dim)";
 }
 
 /* ---- avisos de coherencia ----
@@ -1890,8 +1918,6 @@ function conectar(){
   /* --- niveles --- */
   var nl = el("niv-lista");
   nl.addEventListener("click", function(e){
-    var tb = e.target.closest(".tipo-btn");
-    if(tb){ S.niveles[+tb.getAttribute("data-i")].t = tb.getAttribute("data-t"); guardar(); pintarTodo(); return; }
     var br = e.target.closest("[data-borrar]");
     if(br){ S.niveles.splice(+br.getAttribute("data-borrar"), 1); guardar(); pintarTodo(); return; }
   });
@@ -1908,7 +1934,7 @@ function conectar(){
     guardar(); pintarTodo();
   });
   el("btn-add-niv").addEventListener("click", function(){
-    S.niveles.push({p: Math.round(S.precio), t: "R", n: "nuevo nivel", tf: ""});
+    S.niveles.push({p: Math.round(S.precio), tf: ""});
     S.niveles.sort(function(a,b){ return b.p - a.p; });
     guardar(); pintarTodo();
   });
@@ -2096,8 +2122,8 @@ function cambiarDir(dir){
 /* --- sugerencia automática desde los niveles --- */
 function sugerir(){
   var p = S.precio;
-  var res = S.niveles.filter(function(l){ return l.t === "R"; }).sort(function(a,b){ return a.p - b.p; });
-  var sop = S.niveles.filter(function(l){ return l.t === "S"; }).sort(function(a,b){ return b.p - a.p; });
+  var res = S.niveles.filter(function(l){ return l.p > p; }).sort(function(a,b){ return a.p - b.p; });
+  var sop = S.niveles.filter(function(l){ return l.p < p; }).sort(function(a,b){ return b.p - a.p; });
   var s = setup();
   if(dirActiva() === "long"){
     var apoyo = sop.filter(function(l){ return l.p <= p; });

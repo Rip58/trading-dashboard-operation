@@ -26,7 +26,9 @@ y si no caben la página lo dice en vez de fallar en silencio.
 (`↓↓ ↓ = ↑ ↑↑`) y pesa según su altura: 40/30/20/10. De ahí sale un veredicto
 de largo, corto o sin sesgo, con el desglose de lo que aporta cada una.
 
-**Niveles.** Tabla editable de soportes y resistencias que alimenta al resto.
+**Niveles.** Una línea por nivel: el precio y su temporalidad. Si es soporte o
+resistencia no se marca, se deduce de su posición respecto al precio —así no se
+queda desfasado cuando el precio se mueve— y se ve como una letra de color.
 
 **Mapa de operación.** Entrada, stop y tres objetivos dibujados sobre el eje de
 precio, arrastrables con el ratón o con el teclado (flechas, `shift` para
@@ -41,7 +43,12 @@ resultado de cada escenario. La divisa y el símbolo base se leen del par:
 **Activo y precio.** Un desplegable con los veinte pares en USDT de mayor
 volumen de Binance, cada uno con su precio y su variación del día. Al abrir la
 página se pide el precio del par elegido a la API pública de Binance, en una
-sola petición para los veinte. Si no hay conexión —o si la página se abre como
+sola petición para los veinte. Se prueban cuatro hosts en orden
+(`data-api.binance.vision` primero, que es el de datos públicos y el menos
+restringido), porque el bloqueo suele ser de un dominio concreto y no de
+Binance entera; si ninguno responde, el aviso dice por qué —bloqueo por
+región, acceso denegado, sin conexión— en vez de repetir el error del
+navegador. Si no hay conexión —o si la página se abre como
 artefacto de claude.ai, cuya CSP bloquea las peticiones a dominios externos— se
 conserva el último precio guardado y se avisa; el campo de precio sigue siendo
 editable a mano. La última opción del desplegable, `otro par…`, abre un campo para escribir
