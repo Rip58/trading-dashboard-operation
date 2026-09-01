@@ -131,15 +131,31 @@ Sin servidor, la app no mira las capturas: las guarda y las muestra para que
 las leas tú, y todo el cálculo sale del sesgo, los niveles y el rango que
 introduces, más el precio de Binance.
 
-Con la función desplegada, `analizar con IA` hace dos llamadas:
+Con la función desplegada hay dos botones, y hacen cosas distintas.
 
-1. **Lee las cuatro capturas** y devuelve, por temporalidad, el sesgo y una
-   nota con los precios que lo justifican, más los niveles que distinga. La app
-   lo aplica y recalcula la confluencia y las cuatro estrategias.
-2. **Valora la operación** que sale de ahí —a favor, con matices o en contra—
-   con su razón, los riesgos concretos y un ajuste que la mejoraría.
+**`analizar con IA`** manda las capturas y pide una lectura completa. El prompt
+obliga a leer de mayor a menor temporalidad —la alta define la dirección
+permitida, las bajas solo afinan la entrada—, a anotar la estructura de cada
+gráfico, y a marcar únicamente niveles donde el precio haya reaccionado de
+verdad. De ahí salen los sesgos, las notas y los niveles, que la app aplica y
+con los que recalcula la confluencia y las cuatro estrategias.
 
-La valoración aparece bajo las estrategias y se copia con el plan.
+Y además propone **dos operaciones**: una intradía, con el gatillo en 15m o 1H,
+y otra de swing para 3 o 4 días, con el gatillo en 4H o 1D. Pueden ir en
+direcciones opuestas si eso es lo que dicen los gráficos. Cada una trae entrada,
+stop, tres objetivos, el disparador que confirma la entrada, la invalidación que
+mata la idea y qué hacer si falla. Las operables se guardan como operaciones
+normales, así que aparecen en el desplegable, se dibujan en el mapa y se
+dimensionan con el panel de riesgo como cualquier otra.
+
+El prompt le da permiso explícito para no proponer nada: si una de las dos no
+tiene sentido, devuelve `no operar` y el motivo. Un prompt que siempre encuentra
+un trade encuentra trades malos.
+
+**`pedir opinión sobre la activa`** es la segunda llamada, aparte: coge la
+operación que tengas activa —venga de una estrategia, de la IA o montada a
+mano— y la valora como lo haría un gestor de riesgo: a favor, con matices o en
+contra, con los riesgos concretos y un ajuste. Entra en el plan que copias.
 
 ### La clave nunca llega al navegador
 

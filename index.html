@@ -92,6 +92,12 @@ button,input,select,textarea{font-family:var(--mono); font-size:12px}
 /* ---------- ajustes e IA ---------- */
 .aj-grid{display:grid; grid-template-columns:1fr 200px; gap:12px; align-items:start}
 @media (max-width:620px){ .aj-grid{grid-template-columns:1fr} }
+.ia-rejilla{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px}
+@media (max-width:820px){ .ia-rejilla{grid-template-columns:1fr} }
+.ia-rejilla .ia-caja{margin-top:0}
+.ia-caja.ia-activa{border-color:var(--amber); background:rgba(226,177,68,.06)}
+.ia-dato{font-size:10px; color:var(--dim); line-height:1.55}
+.ia-dato span{display:block; text-transform:uppercase; letter-spacing:.3px; color:var(--dim2); font-size:9px}
 .ia-caja{border:1px solid var(--violet); border-radius:2px; background:rgba(167,139,250,.05);
   padding:10px; margin-top:10px; display:flex; flex-direction:column; gap:6px}
 .ia-cab{display:flex; align-items:baseline; gap:8px; flex-wrap:wrap}
@@ -442,6 +448,8 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
       <div class="rejilla-est" id="rejilla-est"></div>
       <div id="ia-valoracion"></div>
       <div class="fila" style="margin-top:8px">
+        <button class="cmd" id="btn-opinion">[<b>pedir opinión sobre la activa</b>]</button>
+        <span style="color:var(--dim)">·</span>
         <button class="cmd" id="btn-calc-todas">[<b>calcular las cuatro</b>]</button>
         <span style="color:var(--dim)">·</span>
         <span style="font-size:11px;color:var(--dim)">// se marcan las que encajan con el sesgo de ahora mismo</span>
@@ -923,7 +931,7 @@ function estadoBase(){
     check: {},
     verTodos: false,
     plegado: {niveles:true, mapa:false, ajustes:true},
-    ia: {modelo:"route-llm", resumen:null, valoracion:null, cuando:null}
+    ia: {modelo:"route-llm", resumen:null, operaciones:[], valoracion:null, cuando:null}
   };
 }
 var S = estadoBase();
@@ -1009,6 +1017,7 @@ function cargar(){
     if(d.ia && typeof d.ia === "object"){
       if(typeof d.ia.modelo === "string" && d.ia.modelo) S.ia.modelo = d.ia.modelo;
       S.ia.resumen = d.ia.resumen || null;
+      S.ia.operaciones = Array.isArray(d.ia.operaciones) ? d.ia.operaciones : [];
       S.ia.valoracion = d.ia.valoracion || null;
       S.ia.cuando = d.ia.cuando || null;
     }
@@ -1571,20 +1580,60 @@ function pasoLeerGraficos(){
   });
   if(imgs.length < 1) return Promise.reject(new Error("no hay capturas que analizar"));
 
+  /* El prompt hace tres cosas a la vez, y el orden importa: primero obliga a
+     leer de mayor a menor temporalidad (que es como se opera de verdad),
+     después exige que cada precio salga de algo visible, y solo al final pide
+     las dos operaciones. Y le da permiso explícito para no proponer ninguna:
+     un prompt que siempre devuelve un trade devuelve trades malos. */
   var instruccion =
-    "Eres un analista técnico. Te paso " + imgs.length + " capturas de gráficos del mismo activo, " +
-    "en este orden de temporalidad: " + etiquetas.join(", ") + ".\n\n" +
-    "Para CADA captura, en el mismo orden, dime:\n" +
-    "- la temporalidad que veas escrita en el gráfico (si no coincide con la que te he dicho, pon la que veas)\n" +
-    "- el sesgo, como número entero: -2 bajista fuerte, -1 bajista, 0 neutro, 1 alcista, 2 alcista fuerte\n" +
-    "- una nota de una frase, concreta, con los precios que la justifican\n\n" +
-    "Además, dame los niveles de soporte y resistencia que se lean con claridad en el conjunto " +
-    "(máximo 12, ordenados de mayor a menor precio), cada uno con la temporalidad donde mejor se aprecia.\n\n" +
-    "El activo que creo que es: " + S.activo + ". Precio actual: " + fmtP(S.precio) + ".\n" +
-    "Si alguna imagen no es un gráfico, o el activo no coincide, dilo en 'aviso'.\n\n" +
-    "Responde SOLO con este JSON, sin texto alrededor:\n" +
-    '{"activo":"","temporalidades":[{"temporalidad":"","sesgo":0,"nota":""}],' +
-    '"niveles":[{"precio":0,"tf":""}],"aviso":""}';
+"Eres un trader discrecional con quince años operando cripto, y hoy respondes como el gestor de riesgo de la mesa. " +
+"No eres un asistente complaciente: quedarte fuera es una decisión tan buena como entrar, y decir que no ves nada " +
+"es una respuesta profesional.\n\n" +
+
+"Te paso " + imgs.length + " capturas del MISMO activo, de mayor a menor temporalidad: " + etiquetas.join(", ") + ".\n" +
+"Activo declarado: " + S.activo + ". Precio actual, dato en vivo y fiable: " + fmtP(S.precio) + ".\n\n" +
+
+"MÉTODO, en este orden:\n" +
+"1. Lee de arriba abajo. La temporalidad mayor manda: define el contexto y la dirección permitida. Las menores " +
+"sirven para afinar la entrada, nunca para justificar operar contra el contexto.\n" +
+"2. De cada gráfico anota la estructura (máximos y mínimos crecientes, decrecientes o lateral), dónde está el " +
+"precio dentro de su rango, y qué hace el volumen si se aprecia.\n" +
+"3. Marca solo los niveles donde el precio haya reaccionado de verdad: giros, rechazos con mecha, rupturas con " +
+"retesteo, máximos y mínimos que hayan frenado el precio más de una vez. No inventes números redondos ni pintes " +
+"un soporte donde solo hay una vela.\n\n" +
+
+"DESPUÉS PROPÓN DOS OPERACIONES, independientes entre sí:\n" +
+"- Una INTRADÍA, para abrir y cerrar dentro de las próximas horas. El gatillo está en 15m o 1H.\n" +
+"- Una de SWING, para mantener entre 3 y 4 días. El gatillo está en 4H o 1D.\n\n" +
+
+"Pueden ir en direcciones opuestas si es lo que dicen los gráficos; no fuerces que coincidan. Y si una de las dos " +
+"no tiene sentido ahora mismo, pon operar en false y explica en una frase por qué: no hay ninguna obligación de " +
+"encontrar un trade.\n\n" +
+
+"Para cada operación que sí propongas:\n" +
+"- entrada, stop y tres objetivos, en precios concretos\n" +
+"- el stop va DETRÁS de una estructura visible, nunca a una distancia arbitraria ni en el número redondo donde se " +
+"acumulan los stops de todo el mundo\n" +
+"- el primer objetivo tiene que dar al menos 1,5 veces lo que se arriesga; si no llega, no propongas la operación\n" +
+"- disparador: la condición que confirma la entrada, no el precio a secas (por ejemplo 'cierre de 1H por encima " +
+"de X con volumen', no 'entrar en X')\n" +
+"- invalidacion: qué verías que te diría que la idea está muerta, aparte de que salte el stop\n" +
+"- si_falla: qué harías si la operación se pierde, en una frase\n\n" +
+
+"REGLAS QUE NO SE SALTAN:\n" +
+"- Todo precio que escribas sale de algo visible en las capturas. Nada de rangos inventados.\n" +
+"- Si una imagen no es un gráfico, está cortada, o el activo no coincide con el declarado, dilo en 'aviso' y no " +
+"rellenes el hueco a base de suponer.\n" +
+"- Nada de lenguaje de vendedor ni de optimismo por defecto. Si la situación es fea, dilo con esas palabras.\n\n" +
+
+"Responde SOLO con este JSON, sin texto alrededor:\n" +
+'{"activo":"","lectura":[{"temporalidad":"","sesgo":0,"estructura":"","nota":""}],' +
+'"niveles":[{"precio":0,"tf":""}],' +
+'"operaciones":[{"horizonte":"intradia","operar":true,"motivo_no":"","direccion":"largo",' +
+'"entrada":0,"stop":0,"tp1":0,"tp2":0,"tp3":0,"disparador":"","invalidacion":"","si_falla":"",' +
+'"confianza":"media","razon":""}],"aviso":""}\n\n' +
+"sesgo es un entero: -2 bajista fuerte, -1 bajista, 0 neutro, 1 alcista, 2 alcista fuerte. " +
+"En 'operaciones' van exactamente dos entradas, la primera con horizonte 'intradia' y la segunda 'swing'.";
 
   var contenido = [];
   imgs.forEach(function(b, i){
@@ -1593,17 +1642,22 @@ function pasoLeerGraficos(){
   });
   contenido.push({type:"text", text:instruccion});
 
-  return llamarIA([{role:"user", content:contenido}], 3000).then(function(r){
+  return llamarIA([{role:"user", content:contenido}], 4000).then(function(r){
     var d = jsonDe(textoDe(r));
-    // Aplicar lo que ha leído
-    if(Array.isArray(d.temporalidades)){
-      d.temporalidades.slice(0, S.tfs.length).forEach(function(t, i){
+
+    // --- lo que ha leído de cada gráfico ---
+    var lect = d.lectura || d.temporalidades;   // tolerante con el nombre
+    if(Array.isArray(lect)){
+      lect.slice(0, S.tfs.length).forEach(function(t, i){
         if(!S.tfs[i].img) return;
         if(isFinite(t.sesgo)) S.tfs[i].sesgo = clamp(Math.round(t.sesgo), -2, 2);
-        if(t.nota) S.tfs[i].nota = String(t.nota);
+        var nota = [t.estructura, t.nota].filter(Boolean).join(" · ");
+        if(nota) S.tfs[i].nota = nota;
         if(t.temporalidad) S.tfs[i].label = String(t.temporalidad).slice(0, 4);
       });
     }
+
+    // --- niveles ---
     if(Array.isArray(d.niveles) && d.niveles.length){
       var nuevos = d.niveles
         .filter(function(l){ return isFinite(l.precio) && l.precio > 0; })
@@ -1611,10 +1665,51 @@ function pasoLeerGraficos(){
         .sort(function(a,b){ return b.p - a.p; });
       if(nuevos.length) S.niveles = nuevos.slice(0, 14);
     }
+
+    // --- las dos operaciones: entran en la lista de operaciones guardadas ---
+    S.ia.operaciones = [];
+    var ahora = new Date(), creada = null;
+    (Array.isArray(d.operaciones) ? d.operaciones : []).slice(0, 2).forEach(function(o, i){
+      var swing = /swing|dia|día/i.test(String(o.horizonte || "")) && !/intra/i.test(String(o.horizonte || ""));
+      var nombre = swing ? "IA · swing 3-4 días" : "IA · intradía";
+      var ficha = {
+        horizonte: swing ? "swing" : "intradía",
+        nombre: nombre,
+        operar: o.operar !== false,
+        motivo_no: String(o.motivo_no || ""),
+        disparador: String(o.disparador || ""),
+        invalidacion: String(o.invalidacion || ""),
+        si_falla: String(o.si_falla || ""),
+        confianza: String(o.confianza || ""),
+        razon: String(o.razon || ""),
+        dir: /cort|short/i.test(String(o.direccion || "")) ? "short" : "long",
+        entrada:+o.entrada, stop:+o.stop, tp1:+o.tp1, tp2:+o.tp2, tp3:+o.tp3,
+        id: null
+      };
+      var precios = [ficha.entrada, ficha.stop, ficha.tp1, ficha.tp2, ficha.tp3];
+      if(ficha.operar && precios.every(function(v){ return isFinite(v) && v > 0; })){
+        var op = {
+          id: "ia-" + (swing ? "swing" : "intra") + "-" + ahora.getTime(),
+          nombre: nombre, estrategia: null, horizonte: ficha.horizonte,
+          fecha: ahora.toISOString(), dir: ficha.dir,
+          nota: ficha.razon || ficha.disparador,
+          entrada:ficha.entrada, stop:ficha.stop, tp1:ficha.tp1, tp2:ficha.tp2, tp3:ficha.tp3
+        };
+        S.ops.unshift(op);
+        ficha.id = op.id;
+        if(!creada) creada = op.id;      // se activa la intradía, que es la primera
+      } else {
+        ficha.operar = false;
+      }
+      S.ia.operaciones.push(ficha);
+    });
+    if(S.ops.length > 24) S.ops.length = 24;
+    if(creada) S.opId = creada;
+
     S.ia.resumen = {
       activo: d.activo ? String(d.activo) : null,
       aviso: d.aviso ? String(d.aviso) : null,
-      modelo: (r && r.model) || null,      // route-llm dice a qué modelo enrutó
+      modelo: (r && r.model) || null,
       uso: r.usage || null
     };
     S.ia.cuando = new Date().toISOString();
@@ -1676,17 +1771,32 @@ function analizarConIA(){
   iaOcupada = true;
   iaError = null;
   S.ia.valoracion = null;
-  iaTrabajando = "leyendo las cuatro capturas…";
+  iaTrabajando = "leyendo los gráficos y montando las dos operaciones…";
   pintarIA();
   pasoLeerGraficos()
     .then(function(){
-      guardar(); iaTrabajando = "valorando la operación…"; pintarTodo();
-      return pasoValorarOperacion();
-    })
-    .then(function(){
       iaOcupada = false; iaTrabajando = null;
       guardar(); pintarTodo();
-      eco("análisis completado");
+      var n = S.ia.operaciones.filter(function(o){ return o.operar; }).length;
+      eco(n ? n + " operación(es) creadas y guardadas" : "la IA no ve ninguna operación clara");
+    })
+    .catch(function(e){
+      iaOcupada = false; iaTrabajando = null;
+      iaError = e.message || "algo falló";
+      guardar(); pintarTodo();
+    });
+}
+
+function pedirOpinion(){
+  if(iaOcupada) return;
+  if(!servidorIA.listo){ eco(servidorIA.error || "el servidor de IA no está listo"); return; }
+  iaOcupada = true; iaError = null;
+  iaTrabajando = "valorando la operación activa…";
+  pintarIA();
+  pasoValorarOperacion()
+    .then(function(){
+      iaOcupada = false; iaTrabajando = null;
+      guardar(); pintarTodo(); eco("opinión recibida");
     })
     .catch(function(e){
       iaOcupada = false; iaTrabajando = null;
@@ -1696,32 +1806,79 @@ function analizarConIA(){
 }
 
 function pintarIA(){
-  var c = el("ia-valoracion"), trabajando = iaTrabajando, error = iaError;
-  if(trabajando){
+  var c = el("ia-valoracion"), partes = [];
+
+  if(iaTrabajando){
     c.innerHTML = '<div class="ia-caja"><div class="ia-cab">' +
       '<span class="girando" style="color:var(--violet)">▚</span>' +
-      '<span class="ia-ver" style="color:var(--violet)">' + esc(trabajando) + "</span></div>" +
+      '<span class="ia-ver" style="color:var(--violet)">' + esc(iaTrabajando) + "</span></div>" +
       '<div class="ia-pie">// no cierres la página</div></div>';
     return;
   }
-  if(error){
-    c.innerHTML = '<div class="aviso" style="margin-top:10px">// la IA no pudo responder: ' + esc(error) + "</div>";
-    return;
+  if(iaError){
+    partes.push('<div class="aviso" style="margin-top:10px">// la IA no pudo responder: ' + esc(iaError) + "</div>");
   }
+
+  // --- las dos operaciones propuestas ---
+  var ops = S.ia.operaciones || [];
+  if(ops.length){
+    partes.push('<div class="ia-rejilla">' + ops.map(function(o){
+      var col = o.dir === "long" ? "var(--green)" : "var(--red)";
+      if(!o.operar){
+        return '<div class="ia-caja"><div class="ia-cab">' +
+          '<span class="ia-ver" style="color:var(--amber)">' + esc(o.nombre) + "</span>" +
+          '<span class="badge">' + esc(o.horizonte) + "</span></div>" +
+          '<div class="ia-txt" style="color:var(--amber)">· no operar</div>' +
+          '<div class="ia-txt">' + esc(o.motivo_no || "la IA no ve una entrada clara") + "</div></div>";
+      }
+      var riesgo = o.dir === "long" ? o.entrada - o.stop : o.stop - o.entrada;
+      var rr = riesgo > 0 ? (o.dir === "long" ? o.tp1 - o.entrada : o.entrada - o.tp1) / riesgo : NaN;
+      var filas = [
+        ["dirección", o.dir === "long" ? "largo" : "corto", col],
+        ["entrada", fmtP(o.entrada), "var(--white)"],
+        ["stop", fmtP(o.stop), "var(--red)"],
+        ["objetivos", fmtP(o.tp1) + " · " + fmtP(o.tp2) + " · " + fmtP(o.tp3), "var(--green)"],
+        ["R:R al 1º", isFinite(rr) ? fmt(rr, 2) : "—", rr >= 1.5 ? "var(--green)" : "var(--amber)"]
+      ].map(function(f){
+        return '<div class="est-fila"><span>' + f[0] + '</span><span style="color:' + f[2] +
+               ';font-weight:700">' + f[1] + "</span></div>";
+      }).join("");
+      var activa = o.id && o.id === S.opId;
+      return '<div class="ia-caja' + (activa ? " ia-activa" : "") + '"><div class="ia-cab">' +
+        '<span class="ia-ver" style="color:' + col + '">' + esc(o.nombre) + "</span>" +
+        '<span class="badge">' + esc(o.horizonte) + "</span>" +
+        (o.confianza ? '<span class="badge">confianza ' + esc(o.confianza) + "</span>" : "") + "</div>" +
+        '<div class="ia-txt">' + esc(o.razon) + "</div>" +
+        '<div class="est-tabla">' + filas + "</div>" +
+        (o.disparador ? '<div class="ia-dato"><span>disparador</span>' + esc(o.disparador) + "</div>" : "") +
+        (o.invalidacion ? '<div class="ia-dato"><span>invalidación</span>' + esc(o.invalidacion) + "</div>" : "") +
+        (o.si_falla ? '<div class="ia-dato"><span>si falla</span>' + esc(o.si_falla) + "</div>" : "") +
+        (o.id ? '<button class="cmd est-usar" data-ia-op="' + esc(o.id) + '">[<b>' +
+          (activa ? "es la operación activa" : "ver en el mapa") + "</b>]</button>" : "") +
+        "</div>";
+    }).join("") + "</div>");
+  }
+
+  // --- segunda opinión sobre la operación activa ---
   var v = S.ia.valoracion;
-  if(!v){ c.innerHTML = ""; return; }
-  var col = /en contra/.test(v.veredicto) ? "var(--red)"
-          : /matices/.test(v.veredicto) ? "var(--amber)" : "var(--green)";
-  c.innerHTML =
-    '<div class="ia-caja"><div class="ia-cab">' +
-      '<span class="ia-ver" style="color:' + col + '">' + esc(v.veredicto || "—") + "</span>" +
+  if(v){
+    var colv = /en contra/.test(v.veredicto) ? "var(--red)"
+             : /matices/.test(v.veredicto) ? "var(--amber)" : "var(--green)";
+    partes.push('<div class="ia-caja"><div class="ia-cab">' +
+      '<span class="ia-ver" style="color:' + colv + '">' + esc(v.veredicto || "—") + "</span>" +
       '<span class="badge">confianza ' + esc(v.confianza || "—") + "</span>" +
       '<span class="badge">' + esc(v.operacion || "") + "</span></div>" +
-    '<div class="ia-txt">' + esc(v.razon) + "</div>" +
-    (v.riesgos.length ? "<ul class=\"ia-riesgos\">" + v.riesgos.map(function(r){
-        return "<li>" + esc(r) + "</li>"; }).join("") + "</ul>" : "") +
-    (v.ajuste ? '<div class="ia-txt" style="color:var(--amber)">// ' + esc(v.ajuste) + "</div>" : "") +
-    '<div class="ia-pie">// lo dice un modelo mirando tus capturas: contrástalo, no lo obedezcas</div></div>';
+      '<div class="ia-txt">' + esc(v.razon) + "</div>" +
+      (v.riesgos.length ? '<ul class="ia-riesgos">' + v.riesgos.map(function(r){
+          return "<li>" + esc(r) + "</li>"; }).join("") + "</ul>" : "") +
+      (v.ajuste ? '<div class="ia-txt" style="color:var(--amber)">// ' + esc(v.ajuste) + "</div>" : "") +
+      "</div>");
+  }
+
+  if(partes.length && (ops.length || v)){
+    partes.push('<div class="ia-pie" style="margin-top:6px">// lo dice un modelo mirando tus capturas: contrástalo, no lo obedezcas</div>');
+  }
+  c.innerHTML = partes.join("");
 }
 
 function pintarAjustes(){
@@ -2382,6 +2539,14 @@ function conectar(){
       });
   });
   el("btn-ia").addEventListener("click", analizarConIA);
+  el("btn-opinion").addEventListener("click", pedirOpinion);
+  el("ia-valoracion").addEventListener("click", function(e){
+    var b = e.target.closest("[data-ia-op]");
+    if(!b) return;
+    S.opId = b.getAttribute("data-ia-op");
+    guardar(); pintarTodo();
+    el("sec-mapa").scrollIntoView({behavior: reducido() ? "auto" : "smooth", block:"start"});
+  });
 
   /* --- plegar secciones --- */
   document.addEventListener("click", function(e){
@@ -2397,7 +2562,7 @@ function conectar(){
   /* --- vistas --- */
   el("btn-ultimo").addEventListener("click", abrirAnalisis);
   el("btn-nuevo").addEventListener("click", function(){
-    var modelo = S.ia.modelo;               // la clave y el modelo no se tocan
+    var modelo = S.ia.modelo;               // el modelo y la clave de acceso no se tocan
     S = estadoBase();
     S.ia.modelo = modelo;
     S.atr = null;
