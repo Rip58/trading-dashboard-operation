@@ -828,7 +828,7 @@ function datosVivo(){
   lineas.push(vivo
     ? "Precio ahora mismo: " + fmtP(S.precio) + " — dato del ticker de Binance (" +
       (mercadoHost || "binance") + ", " + horaCorta(mercadoSello) + "), exacto. " +
-      "Las capturas pueden marcar otro precio porque son de hace unos minutos: manda este."
+      "Las capturas marcan otro precio porque son de hace unos minutos: manda este, y no señales la diferencia."
     : "Precio ahora mismo: " + fmtP(S.precio) + " — escrito a mano, sin confirmar contra Binance. " +
       "Trátalo como aproximado.");
 
@@ -914,16 +914,33 @@ function bloqueImagen(dataUrl){
   return {type:"image_url", image_url:{url:dataUrl}};
 }
 
+/* Sin corte, una petición que se queda colgada deja el análisis girando para
+   siempre: iaOcupada no se suelta nunca y la pantalla se queda con el
+   esqueleto de la operativa dando vueltas. El servidor se rinde a los 55 s,
+   así que 70 da margen para que devuelva su error legible; pasado eso, el
+   cortado es el navegador. */
+var CORTE_IA_MS = 70000;
+
 function llamarIA(mensajes, maxTokens, temperatura){
+  var ctl = typeof AbortController !== "undefined" ? new AbortController() : null;
+  var alarma = ctl ? setTimeout(function(){ ctl.abort(); }, CORTE_IA_MS) : null;
+  var suelta = function(){ if(alarma) clearTimeout(alarma); };
+
   return fetch(RUTA_IA, {
     method:"POST",
     headers: cabecerasIA(),
+    signal: ctl ? ctl.signal : undefined,
     body: JSON.stringify({
       model: S.ia.modelo || undefined,
       max_tokens: maxTokens || 3000,
       temperature: isFinite(temperatura) ? temperatura : undefined,
       messages: mensajes
     })
+  }).then(function(r){ suelta(); return r; }, function(e){
+    suelta();
+    throw e && e.name === "AbortError"
+      ? new Error("la IA no respondió en " + Math.round(CORTE_IA_MS/1000) + " s: inténtalo otra vez")
+      : e;
   }).then(function(r){
     return r.text().then(function(t){
       var j = null;
@@ -1344,10 +1361,23 @@ var CHECKS = [
   {id:"c9", p:2, t:"No es revancha, ni prisa, ni aburrimiento"}
 ];
 function checkEstado(c){ return c.auto ? !!c.auto() : !!S.check[c.id]; }
+/* La barra mide lo OBJETIVO: los seis criterios que la app puede comprobar
+   sola contra los niveles, el R:R y el riesgo. Los tres manuales —volumen,
+   noticias, cabeza— van aparte a propósito: si contaran, una operación
+   impecable nacería al 79 % solo por tener casillas sin marcar, y eso no dice
+   nada de lo buena que es. */
 function checkScore(){
-  var total = 0, hecho = 0;
-  CHECKS.forEach(function(c){ total += c.p; if(checkEstado(c)) hecho += c.p; });
-  return {pct: total ? Math.round(hecho/total*100) : 0, hecho:hecho, total:total};
+  var auto = {hecho:0, total:0}, mano = {hecho:0, total:0};
+  CHECKS.forEach(function(c){
+    var d = c.auto ? auto : mano;
+    d.total += c.p;
+    if(checkEstado(c)) d.hecho += c.p;
+  });
+  return {
+    pct: auto.total ? Math.round(auto.hecho/auto.total*100) : 0,
+    auto: auto, mano: mano,
+    hecho: auto.hecho + mano.hecho, total: auto.total + mano.total
+  };
 }
 
 /* ================= render: capturas ================= */
@@ -1711,9 +1741,13 @@ datosVivo() + "\n\n" +
 "precio dentro del rango)\n" +
 "- niveles leídos en ese gráfico, cada uno con su precio, su margen de error y por qué es un nivel\n\n" +
 
-"Y al final, un apartado AVISOS con: si alguna imagen no es un gráfico, está cortada o no coincide con el activo " +
-"declarado; qué no has podido leer; y cualquier diferencia entre lo que marcan las capturas y el precio en vivo " +
-"que te he dado.";
+"Y al final, un apartado AVISOS con dos cosas y solo dos: si alguna imagen no es un gráfico, está cortada o no " +
+"coincide con el activo declarado, y qué no has podido leer.\n\n" +
+
+"NO compares el precio del gráfico con el precio en vivo, ni informes de diferencias entre los dos. La captura " +
+"es de hace unos minutos y el precio en vivo es el bueno: esa diferencia se da por supuesta y no es noticia. " +
+"Ese aviso solo da la alarma cuando has leído mal cuál es la última vela, que es justo el error que no " +
+"queremos amplificar.";
 
   var contenido = [];
   cap.imgs.forEach(function(b, i){
@@ -1781,6 +1815,10 @@ datosVivo() + "\n\n" +
 "y solo declarándolo.\n" +
 "- Si pones operar en false: direccion va en null, los cinco precios van en 0, y motivo_no explica en una frase " +
 "por qué no. No rellenes una operación que no vas a recomendar.\n" +
+"- Y en ese caso rellena zona_espera: entre qué dos precios tendría que meterse el precio para que la operación " +
+"volviera a tener sentido, y en que_esperar la señal que buscarías ahí. Los dos precios salen de niveles de la " +
+"lectura, no de números redondos. Es lo único aprovechable de un 'no operar': dónde volver a mirar. Si operar " +
+"va en true, deja los dos precios de zona_espera en 0.\n" +
 "- Los objetivos van en orden: en largo tp1 < tp2 < tp3 y el stop por debajo de la entrada; en corto al revés.\n" +
 "- Nada de lenguaje de vendedor ni de optimismo por defecto. Si la situación es fea, dilo con esas palabras.\n\n" +
 
@@ -1789,7 +1827,8 @@ datosVivo() + "\n\n" +
 '"niveles":[{"precio":0,"tf":""}],' +
 '"operacion":{"operar":true,"motivo_no":"","direccion":"largo",' +
 '"entrada":0,"stop":0,"tp1":0,"tp2":0,"tp3":0,"tp3_proyectado":false,' +
-'"disparador":"","invalidacion":"","si_falla":"","confianza":"media","razon":""},"aviso":""}\n\n' +
+'"disparador":"","invalidacion":"","si_falla":"","confianza":"media","razon":"",' +
+'"zona_espera":{"desde":0,"hasta":0,"que_esperar":""}},"aviso":""}\n\n' +
 "En 'lectura' va una entrada por cada temporalidad de la lectura de arriba, con su sesgo entero de -2 a 2, " +
 "copiando lo que dijo el operador. En 'niveles' van los suyos, sin añadir ninguno. " +
 "En 'operacion' va una sola, la intradía. " +
@@ -1853,6 +1892,9 @@ function pasoLeerGraficos(){
         dir: /cort|short/i.test(String(o.direccion || "")) ? "short" : "long",
         entrada:+o.entrada, stop:+o.stop, tp1:+o.tp1, tp2:+o.tp2, tp3:+o.tp3,
         tp3prov: o.tp3_proyectado === true,   // objetivo sin nivel enfrente, proyectado y declarado
+        zonaDesde: o.zona_espera ? +o.zona_espera.desde : NaN,
+        zonaHasta: o.zona_espera ? +o.zona_espera.hasta : NaN,
+        zonaQue:   o.zona_espera ? String(o.zona_espera.que_esperar || "") : "",
         id: null
       };
       var precios = [ficha.entrada, ficha.stop, ficha.tp1, ficha.tp2, ficha.tp3];
@@ -2027,6 +2069,26 @@ function pedirOpinion(){
     });
 }
 
+/* Un "no operar" a secas es un callejón sin salida: lo útil es dónde volver a
+   mirar. Primero manda la franja que da el modelo, que sí ve el gráfico. Si no
+   la da, se deduce del nivel más cercano en la dirección del sesgo, con medio
+   rango de vela de margen a cada lado — y se dice que es deducida, porque una
+   franja calculada por la app no vale lo mismo que una leída del gráfico. */
+function zonaDeEspera(o){
+  if(o && isFinite(o.zonaDesde) && isFinite(o.zonaHasta) && o.zonaDesde > 0 && o.zonaHasta > 0){
+    return {desde: Math.min(o.zonaDesde, o.zonaHasta),
+            hasta: Math.max(o.zonaDesde, o.zonaHasta),
+            que: o.zonaQue || "", propia: true};
+  }
+  if(!S.niveles.length || !isFinite(S.precio) || !S.precio) return null;
+  var c = confluencia(), ctx = contexto(), m = ctx.A * 0.5, destino = null, que = "";
+  if(c.dir === "short" && ctx.res.length){ destino = ctx.res[0].p; que = "rebote a la resistencia"; }
+  else if(ctx.sop.length){ destino = ctx.sop[0].p; que = "reacción en el soporte"; }
+  else if(ctx.res.length){ destino = ctx.res[0].p; que = "reacción en la resistencia"; }
+  if(destino === null) return null;
+  return {desde: destino - m, hasta: destino + m, que: que, propia: false};
+}
+
 function pintarIA(){
   var c = el("ia-valoracion"), partes = [];
   var progreso = el("ia-progreso");
@@ -2065,11 +2127,17 @@ function pintarIA(){
     partes.push('<div class="ia-rejilla">' + ops.map(function(o){
       var col = o.dir === "long" ? "var(--green)" : "var(--red)";
       if(!o.operar){
+        var z = zonaDeEspera(o);
         return '<div class="ia-caja"><div class="ia-cab">' +
           '<span class="ia-ver" style="color:var(--amber)">' + esc(o.nombre) + "</span>" +
           "</div>" +
           '<div class="ia-txt" style="color:var(--amber)">· no operar</div>' +
-          (o.motivo_no ? '<div class="ia-txt">' + esc(o.motivo_no) + "</div>" : "") + "</div>";
+          (o.motivo_no ? '<div class="ia-txt">' + esc(o.motivo_no) + "</div>" : "") +
+          (z ? '<div class="ia-dato"><span>dónde volver a mirar</span>' +
+               fmtP(z.desde) + " – " + fmtP(z.hasta) +
+               (z.que ? " · " + esc(z.que) : "") +
+               (z.propia ? "" : " <span style=\"color:var(--dim)\">(deducido de los niveles)</span>") +
+               "</div>" : "") + "</div>";
       }
       var filas = [
         ["dirección", o.dir === "long" ? "largo" : "corto", col],
@@ -2412,12 +2480,54 @@ function pintarRiesgo(){
 /* ================= render: validación ================= */
 function pintarValidacion(){
   var cont = el("chk-lista");
-  cont.innerHTML = "";
-  var pct = iaOcupada ? 55 : S.ia.cuando ? 100 : 0;
-  el("chk-score").textContent = S.ia.cuando ? "análisis IA completado" : "pendiente de IA";
   var r = el("chk-relleno");
-  r.style.left = "0"; r.style.width = pct + "%";
-  r.style.backgroundImage = "repeating-linear-gradient(90deg,var(--amber) 0 14px,#0A0A0A 14px 16px)";
+  cont.innerHTML = "";
+
+  // Sin operación no hay nada que puntuar: los criterios automáticos leen la
+  // entrada y el stop, y sin ellos reventarían. La barra queda de progreso.
+  if(!S.ops.length){
+    el("chk-lista").hidden = true;
+    el("chk-veredicto").hidden = true;
+    el("chk-score").textContent = iaOcupada ? "analizando…" : "pendiente de IA";
+    r.style.left = "0"; r.style.width = (iaOcupada ? 55 : 0) + "%";
+    r.style.backgroundImage = "repeating-linear-gradient(90deg,var(--amber) 0 14px,#0A0A0A 14px 16px)";
+    return;
+  }
+
+  el("chk-lista").hidden = false;
+  el("chk-veredicto").hidden = false;
+  CHECKS.forEach(function(c){
+    var ok = checkEstado(c);
+    var b = document.createElement(c.auto ? "div" : "button");
+    b.className = "chk " + (c.auto ? "auto " : "") + (ok ? "ok" : c.auto ? "no" : "");
+    if(!c.auto){
+      b.type = "button";
+      b.setAttribute("data-chk", c.id);
+      b.setAttribute("aria-pressed", ok ? "true" : "false");
+    }
+    b.innerHTML =
+      '<span class="marca">' + (ok ? "[x]" : "[ ]") + '</span>' +
+      '<span class="t">' + esc(c.t) + (c.auto ? ' <span class="badge">auto</span>' : "") + '</span>' +
+      '<span class="p">' + c.p + '</span>';
+    cont.appendChild(b);
+  });
+
+  var sc = checkScore();
+  var col = sc.pct >= 80 ? "var(--green)" : sc.pct >= 55 ? "var(--amber)" : "var(--red)";
+  el("chk-score").textContent = sc.pct + " % · " + sc.auto.hecho + "/" + sc.auto.total + " puntos";
+  r.style.left = "0"; r.style.width = sc.pct + "%";
+  r.style.backgroundImage = "repeating-linear-gradient(90deg," + col + " 0 14px, #0A0A0A 14px 16px)";
+
+  var texto = sc.pct >= 80 ? "operación de las buenas: tamaño completo"
+            : sc.pct >= 55 ? "sirve, pero con la mitad de tamaño"
+            : "no operar: faltan demasiadas cosas";
+  var pendientes = CHECKS.filter(function(c){ return !c.auto && !checkEstado(c); }).length;
+  el("chk-veredicto").innerHTML =
+    '<span class="ver-chip" style="color:' + col + '">' + sc.pct + " % · " + esc(texto) + "</span>" +
+    (pendientes
+      ? '<div style="font-size:11px;color:var(--dim);margin-top:5px">// quedan ' + pendientes +
+        " que solo puedes confirmar tú</div>"
+      : "");
 }
 
 /* ================= render: plan ================= */
@@ -2533,12 +2643,15 @@ function escalar(file, cb){
   lector.onload = function(ev){
     var img = new Image();
     img.onload = function(){
-      var max = 1000;
+      // 1000 px al 0,72 dejaba el eje de precios de TradingView en un borrón:
+      // el modelo confundía cuál era la última vela y luego avisaba de
+      // discrepancias que no existían. Leer bien la escala es media faena.
+      var max = 1600;
       var esc = Math.min(1, max/Math.max(img.width, img.height));
       var c = document.createElement("canvas");
       c.width = Math.round(img.width*esc); c.height = Math.round(img.height*esc);
       c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-      try{ cb(c.toDataURL("image/jpeg", 0.72)); }
+      try{ cb(c.toDataURL("image/jpeg", 0.88)); }
       catch(e){ cb(ev.target.result); }
     };
     img.onerror = function(){ cb(null); };
