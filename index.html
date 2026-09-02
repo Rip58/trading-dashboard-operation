@@ -2121,7 +2121,11 @@ function pintarIA(){
 function pintarAjustes(){
   var b = el("btn-ia");
   var listas = S.tfs.filter(function(t){ return t.img; }).length;
-  b.innerHTML = "[<b>" + (servidorIA.listo ? "analizar con IA" : "analizar con IA (sin servidor)") + "</b>]";
+  // Un botón gris sin motivo es un botón roto: el motivo va en el propio botón.
+  var faltan = S.tfs.length - listas;
+  b.innerHTML = "[<b>" + (!servidorIA.listo ? "analizar con IA (sin servidor)"
+    : faltan > 0 ? "analizar con IA (faltan " + faltan + " captura" + (faltan > 1 ? "s" : "") + ")"
+    : "analizar con IA") + "</b>]";
   b.disabled = listas < S.tfs.length || iaOcupada;
 
   var r = S.ia.resumen, extra = el("aviso-activo");
@@ -2464,6 +2468,11 @@ function pintarPlan(){
 
 /* ================= pintado global ================= */
 // Los resultados solo se muestran después de que la IA haya terminado.
+// "4H, 1H y 15m" en vez de "4H,1H,15m".
+function enumera(a){
+  if(a.length < 2) return a[0] || "";
+  return a.slice(0, -1).join(", ") + " y " + a[a.length - 1];
+}
 function pintarVista(){
   var conCapturas = S.tfs.filter(function(t){ return t.img; }).length;
   el("analisis").hidden = vista !== "analisis";
@@ -2472,11 +2481,16 @@ function pintarVista(){
   ["caja-veredicto","lbl-sesgo","ver-nota"].forEach(function(id){ el(id).hidden = true; });
   el("btn-ultimo").hidden = !(vista === "inicio" && S.ia.cuando);
   el("btn-ultimo").innerHTML = "[<b>ver el último análisis IA</b>]";
+  // Falta de capturas manda sobre el aviso de caducidad: de nada sirve decirte
+  // que vuelvas a analizar si el botón está gris. Y se nombran las que faltan,
+  // porque al cambiar los huecos puede que las tuyas ya no encajen donde crees.
+  var sinFoto = S.tfs.filter(function(t){ return !t.img; }).map(function(t){ return t.label; });
   el("eco-sup").textContent = vista === "inicio"
-    ? (analisisCaducado ? "// el análisis anterior ha caducado: vuelve a analizar"
+    ? (sinFoto.length
+         ? "// " + (analisisCaducado ? "análisis caducado · " : "") + "faltan las capturas de " + enumera(sinFoto)
+       : analisisCaducado ? "// el análisis anterior ha caducado: vuelve a analizar"
        : S.ia.cuando ? "// tienes un análisis guardado"
-       : conCapturas ? "// " + conCapturas + "/" + S.tfs.length + " capturas · listo para analizar"
-       : "// añade las tres capturas para empezar")
+       : "// listo para analizar")
     : "// " + S.activo + " · " + conCapturas + "/" + S.tfs.length + " capturas";
   el("pie").hidden = vista !== "analisis";
 }
