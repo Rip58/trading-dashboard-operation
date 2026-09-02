@@ -2074,6 +2074,7 @@ function analizarConIA(){
   iaOcupada = true;
   iaError = null;
   iaLecturasPrevias = [];
+  iaAnalistas = [];
   S.ia.valoracion = null;
   iaTrabajando = "pidiendo el precio a Binance…";
   el("btn-ia").disabled = true;
@@ -2720,7 +2721,7 @@ function meterImagen(i, file){
     S.ia.cuando = null;
     S.ia.resumen = null;
     S.ia.operaciones = [];
-    iaLecturasPrevias = [];
+    iaLecturasPrevias = []; iaAnalistas = [];
     vista = "inicio";
     // El último índice, no un 3 fijo: ese 3 venía de cuando había cuatro
     // huecos y con tres dejaba slotActivo apuntando fuera del array.
@@ -2753,7 +2754,7 @@ function conectar(){
     var q = e.target.closest("[data-quitar]");
     if(q){
       S.tfs[+q.getAttribute("data-quitar")].img = null;
-      S.ia.cuando = null; S.ia.resumen = null; S.ia.operaciones = []; iaLecturasPrevias = []; vista = "inicio";
+      S.ia.cuando = null; S.ia.resumen = null; S.ia.operaciones = []; iaLecturasPrevias = []; iaAnalistas = []; vista = "inicio";
       guardar(); renderTFs(); pintarVista(); return;
     }
   });
@@ -2764,7 +2765,7 @@ function conectar(){
     var q = e.target.closest("[data-quitar]");
     if(q){
       S.tfs[+q.getAttribute("data-quitar")].img = null;
-      S.ia.cuando = null; S.ia.resumen = null; S.ia.operaciones = []; iaLecturasPrevias = []; vista = "inicio";
+      S.ia.cuando = null; S.ia.resumen = null; S.ia.operaciones = []; iaLecturasPrevias = []; iaAnalistas = []; vista = "inicio";
       guardar(); renderTFs(); pintarVista();
     }
   });
@@ -2807,7 +2808,7 @@ function conectar(){
   }
   el("btn-limpiar-img").addEventListener("click", function(){
     S.tfs.forEach(function(t){ t.img = null; });
-    S.ia.cuando = null; S.ia.resumen = null; S.ia.operaciones = []; iaLecturasPrevias = []; vista = "inicio";
+    S.ia.cuando = null; S.ia.resumen = null; S.ia.operaciones = []; iaLecturasPrevias = []; iaAnalistas = []; vista = "inicio";
     guardar(); renderTFs(); pintarVista();
   });
 
@@ -2921,7 +2922,7 @@ function conectar(){
     var modelo = S.ia.modelo;               // el modelo y la clave de acceso no se tocan
     S = estadoBase();
     S.ia.modelo = modelo;
-    iaLecturasPrevias = [];
+    iaLecturasPrevias = []; iaAnalistas = [];
     S.atr = null;
     try{ localStorage.removeItem(LS); }catch(e){}
     S.tfs.forEach(function(t){ t.img = null; t.activo = null; });
