@@ -1841,8 +1841,19 @@ datosVivo() + "\n\n" +
 "En 'aviso' recoges sus avisos más cualquier pega que le veas tú a la operación.";
 
   // temperature 0: con la misma lectura, las mismas cuentas.
-  return llamarIA([{role:"user", content:instruccion}], 4000, 0, "deepseek-v4-pro");
+  return llamarIA([{role:"user", content:instruccion}], 4000, 0, MEDIADOR.id);
 }
+
+/* El mediador: el modelo que compara los tres informes y firma la operación.
+   No ve los gráficos, así que no necesita visión — necesita razonar sobre tres
+   textos y sacar JSON con la aritmética bien.
+
+   Era deepseek-v4-pro, que sale en los docs de RouteLLM pero esta cuenta
+   rechaza con "Invalid model". Fable 5 sí responde. Ojo con una cosa: en la
+   familia Claude 5 los parámetros de muestreo están eliminados, así que el
+   temperature 0 de abajo viaja pero no hace nada. La repetibilidad de las
+   cuentas ya no está garantizada por ahí. */
+var MEDIADOR = {id:"claude-fable-5", nombre:"Fable 5"};
 
 function pasoLeerGraficos(){
   var cap = bloquesCapturas();
@@ -1955,7 +1966,7 @@ function pasoLeerGraficos(){
       activo: d.activo ? String(d.activo) : null,
       aviso: d.aviso ? String(d.aviso) : null,
       modelo: (r && r.model) || null,
-      mediador: "deepseek-v4-pro",
+      mediador: MEDIADOR.id,
       analistas: iaAnalistas.map(function(a){ return {modelo:a.id, estado:a.estado}; }),
       uso: r.usage || null
     };
@@ -2054,7 +2065,7 @@ function pintarPreanalisis(){
 
   panel.innerHTML = '<div class="ia-flujo-cab"><span class="ia-ver" style="color:var(--white)">consenso multimodelo</span>' +
     '<span class="ia-etapa ' + (leyendo ? "on" : "") + '">01 comparar · <span class="' + (sintetizando ? "on" : "") +
-    '">02 mediar con DeepSeek</span></span></div>' + panelModelos +
+    '">02 mediar con ' + esc(MEDIADOR.nombre) + '</span></span></div>' + panelModelos +
     '<div class="ia-flujo-cab"><span class="ia-ver">lectura final por captura</span></div><div class="ia-lecturas">' + tarjetas +
     '</div><div class="ia-sintesis">' + estadoSintesis + "</div>" + previaSintesis;
 }

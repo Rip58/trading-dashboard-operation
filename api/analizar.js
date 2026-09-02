@@ -23,24 +23,17 @@ function urlAbacus(){
   return process.env.ABACUS_URL || "https://routellm.abacus.ai/v1/chat/completions";
 }
 const LIMITE_CUERPO = 12 * 1024 * 1024;   // cuatro capturas en base64 caben de sobra
-// Los tres primeros son los analistas. El resto son candidatos a mediador: el
-// papel de texto que compara sus tres informes. deepseek-v4-pro sale en los
-// docs de RouteLLM pero esta cuenta lo rechaza con "Invalid model", así que
-// está aquí solo para que el error siga siendo legible si alguien lo pide.
+// Los tres primeros son los analistas, que necesitan visión. Luego el
+// mediador (claude-fable-5) y un recambio de la misma familia por si algún día
+// no responde. Fuera deepseek-v4-pro: sale en los docs de RouteLLM pero esta
+// cuenta lo rechaza con "Invalid model".
 const MODELOS_PERMITIDOS = new Set([
   "route-llm",
   "claude-sonnet-4-6",
   "gpt-5.4",
   "gemini-3.1-pro",
-  "deepseek-v4-pro",
   "claude-fable-5",
   "claude-opus-5",
-  "claude-sonnet-5",
-  "claude-opus-4-7",
-  "claude-opus-4-6",
-  "gpt-5.5",
-  "deepseek-v3.2",
-  "grok-4.2",
 ]);
 
 function modeloPermitido(modelo) {
