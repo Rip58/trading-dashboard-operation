@@ -378,6 +378,7 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
         <button class="cmd" id="btn-limpiar-img">[<b>quitar todas</b>]</button>
         <span style="color:var(--dim);font-size:11px">// las capturas se guardan en este navegador, no salen de aquí</span>
       </div>
+      <div id="ia-progreso" role="status" aria-live="polite" hidden></div>
       <div id="aviso-activo"></div>
       <div id="aviso-guardado" hidden class="aviso amb">// no hay sitio para guardar las capturas en este navegador: se ven ahora, pero se pierden al recargar.</div>
     </div>
@@ -387,7 +388,7 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
   <div id="analisis" hidden>
 
   <!-- ============ 2. CONFLUENCIA ============ -->
-  <section class="sec" id="sec-confluencia">
+  <section class="sec" id="sec-confluencia" hidden>
     <div class="sec-cab"><span class="tri" style="color:var(--amber)">▸</span><h2>confluencia</h2>
       <span class="der" id="conf-peso">pesos 40/30/20/10</span></div>
     <div class="com">// lo que se lee en cada gráfico, ponderado: la temporalidad mayor manda</div>
@@ -410,7 +411,7 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
   </section>
 
   <!-- ============ 3. NIVELES ============ -->
-  <section class="sec" id="sec-niveles">
+  <section class="sec" id="sec-niveles" hidden>
     <div class="sec-cab">
       <h2 class="sec-tit"><button type="button" class="plegar" data-plegar="niveles" aria-expanded="true"
         aria-controls="cuerpo-niveles"><span class="tri" style="color:var(--blue)">▾</span>niveles</button></h2>
@@ -1895,6 +1896,8 @@ function analizarConIA(){
   iaError = null;
   S.ia.valoracion = null;
   iaTrabajando = "pidiendo el precio a Binance…";
+  el("btn-ia").disabled = true;
+  el("btn-ia").innerHTML = "[<b>analizando…</b>]";
   pintarIA();
   // El precio en vivo entra en los dos prompts, así que se refresca justo
   // antes: un ticker de hace media hora vale menos que leer el gráfico.
@@ -1939,6 +1942,23 @@ function pedirOpinion(){
 
 function pintarIA(){
   var c = el("ia-valoracion"), partes = [];
+  var progreso = el("ia-progreso");
+
+  if(iaTrabajando){
+    progreso.hidden = false;
+    progreso.className = "aviso amb";
+    progreso.setAttribute("style", "margin-top:8px;border-color:var(--amber);color:var(--amber)");
+    progreso.innerHTML = '<span class="girando">▚</span> // ' + esc(iaTrabajando) + " · no cierres la página";
+  } else if(iaError){
+    progreso.hidden = false;
+    progreso.className = "aviso";
+    progreso.setAttribute("style", "margin-top:8px");
+    progreso.textContent = "// la IA no pudo responder: " + iaError;
+  } else {
+    progreso.hidden = true;
+    progreso.textContent = "";
+    progreso.removeAttribute("style");
+  }
 
   if(iaTrabajando){
     c.innerHTML = '<div class="ia-caja"><div class="ia-cab">' +
@@ -2780,8 +2800,6 @@ function conectar(){
   /* --- pie de navegación --- */
   var destinos = [
     {id:"sec-evidencia",  l:"evidencia",   corto:"evid",  c:"var(--violet)"},
-    {id:"sec-confluencia",l:"confluencia", corto:"conf",  c:"var(--amber)"},
-    {id:"sec-niveles",    l:"niveles",     corto:"niv",   c:"var(--blue)"},
     {id:"sec-estrategias",l:"operativas IA",corto:"IA",   c:"var(--violet)"},
     {id:"sec-validacion", l:"validación IA",corto:"valid",c:"var(--amber)"}
   ];
