@@ -11,7 +11,7 @@
 </style>
 </head>
 <body>
-<title>Dashboard Trading Operation</title>
+<title>Intraday</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
 <style>
 /* ------------------------------------------------------------------ *
@@ -92,8 +92,7 @@ button,input,select,textarea{font-family:var(--mono); font-size:12px}
 /* ---------- ajustes e IA ---------- */
 .aj-grid{display:grid; grid-template-columns:1fr 200px; gap:12px; align-items:start}
 @media (max-width:620px){ .aj-grid{grid-template-columns:1fr} }
-.ia-rejilla{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px}
-@media (max-width:820px){ .ia-rejilla{grid-template-columns:1fr} }
+.ia-rejilla{display:grid; grid-template-columns:1fr; gap:10px; margin-top:10px}
 .ia-rejilla .ia-caja{margin-top:0}
 .ia-caja.ia-activa{border-color:var(--amber); background:rgba(226,177,68,.06)}
 .ia-dato{font-size:10px; color:var(--dim); line-height:1.55}
@@ -108,6 +107,23 @@ button,input,select,textarea{font-family:var(--mono); font-size:12px}
 .girando{display:inline-block; animation:v6Giro 1s steps(4) infinite}
 @keyframes v6Giro{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){ .girando{animation:none} }
+.ia-flujo{margin-top:10px; padding:10px; border:1px solid var(--violet); border-radius:2px;
+  background:rgba(167,139,250,.035)}
+.ia-flujo-cab{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:9px}
+.ia-etapa{font-size:10px; color:var(--dim); text-transform:uppercase; letter-spacing:.35px}
+.ia-etapa.on{color:var(--amber)}
+.ia-lecturas{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px}
+@media (max-width:720px){.ia-lecturas{grid-template-columns:1fr}}
+.ia-lectura{display:grid; grid-template-columns:76px 1fr; gap:9px; min-height:92px; padding:7px;
+  border:1px solid var(--border); background:var(--sunk)}
+.ia-lectura img{width:76px;height:76px;object-fit:cover;border:1px solid var(--border);border-radius:2px}
+.ia-lectura-txt{font-size:10px;line-height:1.55;color:var(--dim2);white-space:pre-wrap;overflow-wrap:anywhere}
+.ia-esqueleto{height:7px;margin:6px 0;background:linear-gradient(90deg,var(--border),rgba(167,139,250,.45),var(--border));
+  background-size:200% 100%;animation:iaCarga 1.4s linear infinite}
+.ia-esqueleto:nth-child(2){width:82%}.ia-esqueleto:nth-child(3){width:61%}
+@keyframes iaCarga{to{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){.ia-esqueleto{animation:none}}
+.ia-sintesis{margin-top:9px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;color:var(--dim)}
 
 /* ---------- barra superior de acciones ---------- *//* ---------- barra superior de acciones ---------- */
 .barra-sup{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:12px;
@@ -139,9 +155,9 @@ button,input,select,textarea{font-family:var(--mono); font-size:12px}
 .ver-chip{display:inline-flex; align-items:center; gap:6px; font-size:14px; font-weight:700; padding:4px 8px; border-radius:2px; border:1px solid currentColor}
 
 /* ---------- capturas ---------- */
-/* Las cuatro capturas van siempre en la misma fila, pequeñas: la gracia es
+/* Las tres capturas van siempre en la misma fila, pequeñas: la gracia es
    compararlas de un vistazo. Para verlas de verdad se toca y se abre la lupa. */
-.rejilla-tf{display:grid; grid-template-columns:repeat(4,1fr); gap:10px}
+.rejilla-tf{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
 @media (max-width:700px){ .rejilla-tf{gap:5px} }
 @media (max-width:420px){ .rejilla-tf{gap:4px} }
 .tf-card{border:1px solid var(--border); border-radius:2px; background:var(--sunk); display:flex; flex-direction:column; min-width:0}
@@ -318,7 +334,7 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
   <div class="caja">
     <div style="font-size:13px">
       <span style="color:var(--green)">rip</span><span style="color:var(--blue)">@dashboard</span><span style="color:var(--dim)">:~</span><span style="color:var(--green)">$</span>
-      <span style="color:var(--white);font-weight:700">trading operation</span><span class="v6-cursor"></span>
+      <span style="color:var(--white);font-weight:700">intraday</span><span class="v6-cursor"></span>
     </div>
     <div class="carga-carril"><span class="carga-barra"></span></div>
     <div style="font-size:11px;color:var(--dim);margin-top:10px">// montando la mesa…</div>
@@ -329,9 +345,9 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
 
   <div class="prompt">
     <span style="color:var(--green)">rip</span><span style="color:var(--blue)">@dashboard</span><span style="color:var(--dim)">:~</span><span style="color:var(--green)">$</span>
-    <span style="color:var(--white);font-weight:700">trading operation</span><span class="v6-cursor"></span>
+    <span style="color:var(--white);font-weight:700">intraday</span><span class="v6-cursor"></span>
   </div>
-  <div style="font-size:11px;color:var(--dim);margin-top:3px">// cuatro capturas → lectura de IA → una operativa intradía y otra swing</div>
+  <div style="font-size:11px;color:var(--dim);margin-top:3px">// tres capturas → lectura de IA → una operativa intradía</div>
 
   <div class="barra-sup">
     <button class="caja-btn" id="btn-nuevo">nuevo análisis</button>
@@ -367,11 +383,11 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
   <!-- ============ 1. EVIDENCIA ============ -->
   <section class="sec" id="sec-evidencia">
     <div class="sec-cab"><span class="tri" style="color:var(--violet)">▸</span><h2>evidencia</h2>
-      <span class="der" id="cuenta-img">0/4 capturas</span></div>
+      <span class="der" id="cuenta-img">0/3 capturas</span></div>
     <div class="com">// suelta, pega (ctrl+v) o haz clic en cada hueco — de mayor a menor temporalidad, y luego analiza</div>
     <div class="cuerpo">
       <div class="rejilla-tf" id="rejilla-tf"></div>
-      <div class="nota-activa" id="nota-activa"></div>
+      <div class="nota-activa" id="nota-activa" hidden></div>
       <div class="fila" style="margin-top:8px">
         <button class="cmd" id="btn-ia">[<b>analizar con IA</b>]</button>
         <span style="color:var(--dim)">·</span>
@@ -379,6 +395,7 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
         <span style="color:var(--dim);font-size:11px">// las capturas se guardan en este navegador, no salen de aquí</span>
       </div>
       <div id="ia-progreso" role="status" aria-live="polite" hidden></div>
+      <div id="ia-preanalisis" class="ia-flujo" aria-live="polite" hidden></div>
       <div id="aviso-activo"></div>
       <div id="aviso-guardado" hidden class="aviso amb">// no hay sitio para guardar las capturas en este navegador: se ven ahora, pero se pierden al recargar.</div>
     </div>
@@ -390,8 +407,8 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
   <!-- ============ 2. CONFLUENCIA ============ -->
   <section class="sec" id="sec-confluencia" hidden>
     <div class="sec-cab"><span class="tri" style="color:var(--amber)">▸</span><h2>confluencia</h2>
-      <span class="der" id="conf-peso">pesos 40/30/20/10</span></div>
-    <div class="com">// lo que se lee en cada gráfico, ponderado: la temporalidad mayor manda</div>
+      <span class="der" id="conf-peso">escalera</span></div>
+    <div class="com">// la escalera del intradía: 4H manda, y no vota — veta</div>
     <div class="cuerpo">
       <div class="conf-grid">
         <div>
@@ -433,7 +450,7 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
   <section class="sec" id="sec-estrategias">
     <div class="sec-cab"><span class="tri" style="color:var(--violet)">▸</span><h2>operativas de IA</h2>
       <span class="der" id="est-regimen" hidden>—</span></div>
-    <div class="com">// dos lecturas del mismo análisis: operativa 1 intradía y operativa 2 swing</div>
+    <div class="com">// la operativa que propone la IA y las cuatro que calcula la propia página</div>
     <div class="cuerpo">
       <div class="rejilla-est" id="rejilla-est" hidden></div>
       <div id="ia-valoracion"></div>
@@ -564,38 +581,11 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
   <section class="sec" id="sec-ajustes">
     <div class="sec-cab">
       <h2 class="sec-tit"><button type="button" class="plegar" data-plegar="ajustes" aria-expanded="false"
-        aria-controls="cuerpo-ajustes"><span class="tri" style="color:var(--dim2)">▸</span>ajustes</button></h2>
-      <span class="der" id="ia-estado">sin clave</span></div>
-    <div class="com">// una clave de Anthropic aquí y la IA lee las capturas por ti</div>
+        aria-controls="cuerpo-ajustes"><span class="tri" style="color:var(--dim2)">▸</span>ajustes</button></h2></div>
     <div class="cuerpo" id="cuerpo-ajustes">
-      <div id="srv-estado" class="aviso amb">// comprobando el servidor…</div>
-      <div class="aj-grid" style="margin-top:10px">
-        <div>
-          <label class="lbl" for="i-modelo">modelo</label>
-          <input id="i-modelo" class="inp" autocomplete="off" spellcheck="false" placeholder="route-llm">
-          <div style="font-size:10px;color:var(--dim);margin-top:3px">
-            // route-llm elige el modelo solo; escribe otro nombre de tu catálogo para forzarlo
-          </div>
-        </div>
-        <div>
-          <label class="lbl" for="i-acceso">clave de acceso</label>
-          <input id="i-acceso" class="inp" type="password" autocomplete="off" spellcheck="false"
-                 placeholder="solo si la pusiste en Vercel">
-          <div style="font-size:10px;color:var(--dim);margin-top:3px">
-            // la de DASHBOARD_CLAVE, no la de Abacus
-          </div>
-        </div>
-      </div>
-      <div class="fila" style="margin-top:8px">
+      <div class="fila">
         <button class="cmd" id="btn-probar">[<b>probar la conexión</b>]</button>
-        <span style="color:var(--dim)">·</span>
-        <button class="cmd" id="btn-recomprobar">[<b>volver a comprobar</b>]</button>
         <span id="ia-eco" style="font-size:11px"></span>
-      </div>
-      <div class="aviso amb" style="margin-top:10px">
-        // la clave de Abacus vive en las variables de entorno de Vercel y nunca baja al navegador.<br>
-        // pero el despliegue es público: sin DASHBOARD_CLAVE, cualquiera con la URL gasta de tu cuenta.<br>
-        // cada análisis consume tu cuota. en un fichero local o en el artefacto no hay servidor, así que no funciona.
       </div>
     </div>
   </section>
@@ -832,8 +822,7 @@ function datosVivo(){
       " (" + fmt(rango, 0) + " puntos, " + fmt(rango / m.precio * 100, 2) + " %). " +
       "Son datos de Binance, no lecturas del gráfico: úsalos para dimensionar. " +
       "Un stop intradía razonable está en el entorno de " + fmt(rango / 6, 0) +
-      " a " + fmt(rango / 3, 0) + " puntos; uno de swing, entre " + fmt(rango / 2, 0) +
-      " y " + fmt(rango, 0) + " puntos. No son reglas, son la escala de volatilidad que hay hoy: " +
+      " a " + fmt(rango / 3, 0) + " puntos. No es una regla, es la escala de volatilidad que hay hoy: " +
       "si te sales mucho de ahí, justifícalo con la estructura."
     );
   }
@@ -950,29 +939,21 @@ function jsonDe(txt){
 }
 
 /* ================= estado inicial =================
-   Sembrado con la lectura de las cuatro capturas de BTC/USDT del 30-ago
-   (1D / 4H / 1H / 15m). Todo es editable. */
+   Solo estructura vacía. Toda lectura, nivel y operativa llega del LLM. */
 function estadoBase(){
   return {
     activo: "BTC/USDT",
-    precio: 78803.31,
+    precio: 0,
+    // Los pesos viven en ESCALERA, no aquí: son de la escalera, no de la
+    // temporalidad suelta.
     tfs: [
-      {id:"d1",  label:"1D",  peso:40, sesgo:2,  img:null, nota:"Impulso vertical desde 64.500; sin señal de vuelta."},
-      {id:"h4",  label:"4H",  peso:30, sesgo:0,  img:null, nota:"Rango 76.650 – 81.200. Corrección lateral, volumen a la baja."},
-      {id:"h1",  label:"1H",  peso:20, sesgo:1,  img:null, nota:"Mínimos crecientes desde 77.400."},
-      {id:"m15", label:"15m", peso:10, sesgo:1,  img:null, nota:"Empuje con volumen hasta 78.900, aún sin cerrar por encima."}
+      {id:"h4",  label:"4H",  sesgo:0, img:null, nota:""},
+      {id:"h1",  label:"1H",  sesgo:0, img:null, nota:""},
+      {id:"m15", label:"15m", sesgo:0, img:null, nota:""}
     ],
-    niveles: [
-      {p:81600, tf:"1D"}, {p:81200, tf:"4H"}, {p:80300, tf:"4H"}, {p:79400, tf:"4H"},
-      {p:78900, tf:"1H"}, {p:78200, tf:"1H"}, {p:77960, tf:"15m"}, {p:77400, tf:"4H"},
-      {p:76650, tf:"4H"}, {p:72000, tf:"1D"}, {p:64500, tf:"1D"}
-    ],
-    ops: [{
-      id:"manual", nombre:"Manual", estrategia:null, horizonte:null, fecha:null,
-      dir:"long", nota:"Operación montada a mano sobre los niveles.",
-      entrada:78350, stop:77900, tp1:79400, tp2:80300, tp3:81200
-    }],
-    opId: "manual",
+    niveles: [],
+    ops: [],
+    opId: null,
     atr: null,                     // null = estimado a partir de los niveles
     riesgo: {capital:5000, pct:1, apal:5},
     check: {},
@@ -1014,13 +995,16 @@ function cargar(){
     S.precio  = isFinite(d.precio) ? d.precio : base.precio;
     if(isFinite(d.atr) && d.atr > 0) S.atr = +d.atr;
     S.verTodos = !!d.verTodos;
-    if(Array.isArray(d.tfs)) S.tfs.forEach(function(t,i){
-      var o = d.tfs[i]; if(!o) return;
+    // Se casa por id, no por posición: al entrar 1W delante, un guardado de
+    // cuatro temporalidades habría corrido cada captura un hueco.
+    if(Array.isArray(d.tfs)) S.tfs.forEach(function(t){
+      var o = null;
+      for(var k = 0; k < d.tfs.length; k++) if(d.tfs[k] && d.tfs[k].id === t.id) o = d.tfs[k];
+      if(!o) return;
       t.sesgo = clamp(Math.round(o.sesgo||0), -2, 2);
       t.nota = typeof o.nota === "string" ? o.nota : t.nota;
       t.img = typeof o.img === "string" ? o.img : null;
       t.activo = typeof o.activo === "string" ? o.activo : null;
-      if(isFinite(o.peso)) t.peso = o.peso;
     });
     if(Array.isArray(d.niveles)) S.niveles = d.niveles
       .filter(function(l){ return l && isFinite(l.p); })
@@ -1031,24 +1015,15 @@ function cargar(){
           return {
             id:String(o.id), nombre:String(o.nombre || "Operación"),
             estrategia: o.estrategia ? String(o.estrategia) : null,
-            horizonte: o.horizonte ? String(o.horizonte) : null,
             fecha: o.fecha ? String(o.fecha) : null,
             dir: o.dir === "short" ? "short" : "long",
             nota: String(o.nota || ""),
             entrada:+o.entrada, stop:+o.stop, tp1:+o.tp1, tp2:+o.tp2, tp3:+o.tp3
           };
         });
-      if(!S.ops.length) S.ops = estadoBase().ops;
-      S.opId = S.ops.some(function(o){ return o.id === d.opId; }) ? d.opId : S.ops[0].id;
-    } else if(d.setups){
-      // Guardado de una versión anterior: traía un par largo/corto en vez de una lista.
-      var k = d.dir === "short" ? "short" : "long", v = d.setups[k];
-      if(v && isFinite(v.entrada)){
-        S.ops[0].dir = k;
-        ["entrada","stop","tp1","tp2","tp3"].forEach(function(f){
-          if(isFinite(v[f])) S.ops[0][f] = +v[f];
-        });
-      }
+      S.opId = S.ops.length
+        ? (S.ops.some(function(o){ return o.id === d.opId; }) ? d.opId : S.ops[0].id)
+        : null;
     }
     if(d.riesgo){
       if(isFinite(d.riesgo.capital)) S.riesgo.capital = +d.riesgo.capital;
@@ -1089,12 +1064,38 @@ function colorSesgo(v){ return v > 0 ? "var(--green)" : v < 0 ? "var(--red)" : "
 function glifoSesgo(v){ for(var i=0;i<SESGOS.length;i++) if(SESGOS[i].v===v) return SESGOS[i].c; return "="; }
 function nombreSesgo(v){ for(var i=0;i<SESGOS.length;i++) if(SESGOS[i].v===v) return SESGOS[i].n; return "neutro"; }
 
+/* La escalera del intradía: 4H fija la dirección permitida, 1H da la zona
+   donde esperar y 15m el gatillo, con el salto de factor 4-6x entre peldaños
+   del Triple Screen de Elder.
+
+   Por encima de 4H no se sube: una vela diaria no llega a cerrar dentro de una
+   operación que se abre y se cierra en el día, así que dejarla votar era dejar
+   que decidiera la temporalidad más lenta la decisión más rápida. */
+var ESCALERA = {contexto:"h4", pesos:{h4:50, h1:30, m15:20}};
+var PAPELES = {h4:"contexto", h1:"estructura", m15:"gatillo"};
+function tfPorId(id){
+  for(var i = 0; i < S.tfs.length; i++) if(S.tfs[i].id === id) return S.tfs[i];
+  return null;
+}
+
+/* 4H es puerta, no voto: si va en contra, no hay operación por mucho que 1H y
+   15m se pongan de acuerdo. Con la suma ponderada de antes, las dos menores
+   juntas tumbaban a la mayor; en seguimiento de tendencia el contexto se
+   respeta o se está fuera, no se vota. */
 function confluencia(){
-  var pesoTotal = 0, suma = 0;
-  S.tfs.forEach(function(t){ pesoTotal += t.peso; suma += (t.sesgo/2) * t.peso; });
+  var pesoTotal = 0, suma = 0, ctx = 0;
+  S.tfs.forEach(function(t){
+    var p = ESCALERA.pesos[t.id];
+    if(!p) return;
+    pesoTotal += p;
+    suma += (t.sesgo/2) * p;
+    if(t.id === ESCALERA.contexto) ctx = t.sesgo;
+  });
   var score = pesoTotal ? Math.round((suma/pesoTotal)*100) : 0;
   var dir = score >= 25 ? "long" : score <= -25 ? "short" : "none";
-  return {score:score, dir:dir, pesoTotal:pesoTotal};
+  var vetado = dir !== "none" && ctx !== 0 && (dir === "long") !== (ctx > 0);
+  if(vetado) dir = "none";
+  return {score:score, dir:dir, pesoTotal:pesoTotal, ctx:ctx, vetado:vetado};
 }
 function opActiva(){
   for(var i = 0; i < S.ops.length; i++) if(S.ops[i].id === S.opId) return S.ops[i];
@@ -1114,7 +1115,7 @@ function atrAuto(){
 function atr(){ return isFinite(S.atr) && S.atr > 0 ? S.atr : atrAuto(); }
 
 /* ================= las cuatro estrategias =================
-   Dos de tendencia (swing) y dos de reversión (intradía). Todas se calculan
+   Dos de tendencia y dos de reversión, todas intradía. Todas se calculan
    con lo que ya hay en pantalla: precio, niveles, rango medio de vela y el
    sesgo ponderado. Ninguna necesita datos que la página no tenga.
 
@@ -1124,25 +1125,12 @@ function atr(){ return isFinite(S.atr) && S.atr > 0 ? S.atr : atrAuto(); }
    55-65 % de aciertos con 2:1 o mejor; y la reversión gana cuando el mercado
    se mete en rango, que es justo cuando las dos anteriores fallan. */
 
-// 4H en adelante cuenta como temporalidad alta.
-function esAlta(tf){ return /^\s*(4h|6h|8h|12h|1?d|[23]d|1?w|1?m)\s*$/i.test(String(tf || "")); }
-
-// Una estrategia de swing no debe colgarse del rango de los últimos quince
-// minutos: para swing se usan solo los niveles de temporalidad alta, y si no
-// hay suficientes a ambos lados del precio, se cae de vuelta a todos.
-function contexto(horizonte){
+function contexto(){
   var P = S.precio, A = atr();
-  var lista = S.niveles;
-  if(horizonte === "swing"){
-    var altos = S.niveles.filter(function(l){ return esAlta(l.tf); });
-    var hayArriba = altos.some(function(l){ return l.p > P; });
-    var hayAbajo  = altos.some(function(l){ return l.p < P; });
-    if(hayArriba && hayAbajo) lista = altos;
-  }
-  var res = lista.filter(function(l){ return l.p > P; }).sort(function(a,b){ return a.p - b.p; });
-  var sop = lista.filter(function(l){ return l.p < P; }).sort(function(a,b){ return b.p - a.p; });
+  var res = S.niveles.filter(function(l){ return l.p > P; }).sort(function(a,b){ return a.p - b.p; });
+  var sop = S.niveles.filter(function(l){ return l.p < P; }).sort(function(a,b){ return b.p - a.p; });
   var c = confluencia();
-  return {P:P, A: horizonte === "swing" ? A*3 : A, res:res, sop:sop, score:c.score,
+  return {P:P, A:A, res:res, sop:sop, score:c.score,
           dir: c.dir === "none" ? (c.score >= 0 ? "long" : "short") : c.dir};
 }
 // n-ésimo nivel de la lista; si no existe, se proyecta a partir del último.
@@ -1154,7 +1142,7 @@ function nivel(lista, i, P, paso, signo){
 
 var ESTRATEGIAS = [
   {
-    id:"ruptura", nombre:"Ruptura de rango", horizonte:"swing", regimen:"tendencia",
+    id:"ruptura", nombre:"Ruptura de rango", regimen:"tendencia",
     lema:"Rompe el techo del rango y proyecta su altura",
     detalle:"Entra al superar la resistencia, con el stop de vuelta dentro del rango. Acierta poco pero cuando corre, corre.",
     calc: function(c){
@@ -1175,7 +1163,7 @@ var ESTRATEGIAS = [
     }
   },
   {
-    id:"retroceso", nombre:"Retroceso en tendencia", horizonte:"swing", regimen:"tendencia",
+    id:"retroceso", nombre:"Retroceso en tendencia", regimen:"tendencia",
     lema:"Espera la corrección al primer nivel y sigue el tren",
     detalle:"Entra en el retroceso al soporte más cercano, con el stop detrás de la siguiente estructura. Es la de mayor porcentaje de aciertos.",
     calc: function(c){
@@ -1197,7 +1185,7 @@ var ESTRATEGIAS = [
     }
   },
   {
-    id:"barrido", nombre:"Barrido de liquidez", horizonte:"intradía", regimen:"cualquiera",
+    id:"barrido", nombre:"Barrido de liquidez", regimen:"cualquiera",
     lema:"Entra donde saltaron los stops, con el stop bajo la mecha",
     detalle:"El precio perfora el nivel, caza los stops y lo recupera. Stop muy ceñido bajo la mecha, así que el R:R sale alto.",
     calc: function(c){
@@ -1217,7 +1205,7 @@ var ESTRATEGIAS = [
     }
   },
   {
-    id:"rango", nombre:"Vuelta al rango", horizonte:"intradía", regimen:"rango",
+    id:"rango", nombre:"Vuelta al rango", regimen:"rango",
     lema:"Opera contra el extremo y busca la mitad",
     detalle:"Reversión a la media: se entra en el extremo del rango buscando el centro. La dirección la marca dónde está el precio, no el sesgo.",
     calc: function(c){
@@ -1257,7 +1245,6 @@ function aplicarEstrategia(id){
     id: est.id + "-" + ahora.getTime(),
     nombre: est.nombre,
     estrategia: est.id,
-    horizonte: est.horizonte,
     fecha: ahora.toISOString(),
     dir: r.dir, nota: r.nota,
     entrada:r.entrada, stop:r.stop, tp1:r.tp1, tp2:r.tp2, tp3:r.tp3
@@ -1302,11 +1289,17 @@ function riesgoCalc(){
 
 /* ================= checklist ================= */
 var CHECKS = [
-  {id:"c1", p:3, t:"La temporalidad mayor acompaña a la dirección", auto:function(){
-      var d1 = S.tfs[0].sesgo; return dirActiva() === "long" ? d1 > 0 : d1 < 0; }},
-  {id:"c2", p:2, t:"Al menos 3 de 4 temporalidades no van en contra", auto:function(){
-      var n = 0; S.tfs.forEach(function(t){
-        if(dirActiva() === "long" ? t.sesgo >= 0 : t.sesgo <= 0) n++; }); return n >= 3; }},
+  {id:"c1", p:3, t:"La temporalidad de contexto acompaña a la dirección", auto:function(){
+      var t = tfPorId(ESCALERA.contexto);
+      if(!t) return false;
+      return dirActiva() === "long" ? t.sesgo > 0 : t.sesgo < 0; }},
+  {id:"c2", p:2, t:"Ninguna temporalidad de la escalera va en contra", auto:function(){
+      var largo = dirActiva() === "long", ok = true;
+      S.tfs.forEach(function(t){
+        if(!ESCALERA.pesos[t.id]) return;
+        if(largo ? t.sesgo < 0 : t.sesgo > 0) ok = false;
+      });
+      return ok; }},
   {id:"c3", p:2, t:"La entrada está apoyada en un nivel, no en el aire", auto:function(){
       var e = setup().entrada; return S.niveles.some(function(l){
         return Math.abs(l.p - e) / (e||1) < 0.0025; }); }},
@@ -1343,8 +1336,7 @@ function renderTFs(){
     var card = document.createElement("div");
     card.className = "tf-card" + (i === slotActivo ? " activa" : "");
     card.innerHTML =
-      '<div class="tf-cab"><span class="tf-nom">' + esc(t.label) + '</span>' +
-        '<span class="tf-peso">' + t.peso + '%</span></div>' +
+      '<div class="tf-cab"><span class="tf-nom">' + esc(t.label) + '</span></div>' +
       '<button class="zona" data-i="' + i + '" aria-label="' +
           (t.img ? "Ampliar la captura de " : "Añadir la captura de ") + esc(t.label) + '">' +
         (t.img
@@ -1358,7 +1350,7 @@ function renderTFs(){
         : '');
     cont.appendChild(card);
   });
-  el("cuenta-img").textContent = n + "/4 capturas";
+  el("cuenta-img").textContent = n + "/" + S.tfs.length + " capturas";
 
   // La nota no cabe dentro de una columna de 85px: va debajo, y es la de la
   // temporalidad seleccionada.
@@ -1377,6 +1369,8 @@ function renderTFs(){
 /* ================= render: confluencia ================= */
 function renderConfluencia(){
   var c = confluencia();
+  var tfCtx = tfPorId(ESCALERA.contexto);
+  var nomCtx = tfCtx ? tfCtx.label : ESCALERA.contexto;
   var color = c.dir === "long" ? "var(--green)" : c.dir === "short" ? "var(--red)" : "var(--dim2)";
   var r = el("conf-relleno");
   var mitad = Math.abs(c.score)/2; // % del ancho total
@@ -1388,20 +1382,27 @@ function renderConfluencia(){
   var chip = el("ver-chip");
   chip.textContent = etiqueta + "  " + (c.score > 0 ? "+" : "") + c.score;
   chip.style.color = color;
-  el("ver-nota").textContent = c.dir === "none"
+  el("ver-nota").textContent = c.vetado
+    ? "// " + nomCtx + " va en contra: fuera del mercado"
+    : c.dir === "none"
     ? "// las temporalidades se contradicen: fuera del mercado"
     : "// " + (c.dir === "long" ? "sesgo comprador" : "sesgo vendedor") + " en " + S.activo;
 
-  el("conf-lectura").innerHTML = c.dir === "none"
+  el("conf-lectura").innerHTML = c.vetado
+    ? 'Las menores empujan, pero <b>' + esc(nomCtx) + '</b> manda y va en contra. ' +
+      '<span style="color:var(--dim)">El contexto no se vota: aquí no hay operación.</span>'
+    : c.dir === "none"
     ? 'Sin acuerdo entre temporalidades. <span style="color:var(--dim)">Lo barato aquí es no operar.</span>'
     : 'Las temporalidades se alinean <b style="color:' + color + '">' + (c.dir === "long" ? "al alza" : "a la baja") +
       '</b>. <span style="color:var(--dim)">Opera solo en esa dirección.</span>';
-  el("conf-peso").textContent = "pesos " + S.tfs.map(function(t){ return t.peso; }).join("/");
+
+  el("conf-peso").textContent =
+    S.tfs.map(function(t){ return t.label + " " + ESCALERA.pesos[t.id]; }).join(" / ");
 
   var lista = el("conf-aportes");
   lista.innerHTML = "";
   S.tfs.forEach(function(t){
-    var ap = (t.sesgo/2) * t.peso;
+    var ap = (t.sesgo/2) * ESCALERA.pesos[t.id];
     var col = t.sesgo > 0 ? "var(--green)" : t.sesgo < 0 ? "var(--red)" : "var(--dim2)";
     var d = document.createElement("div");
     d.className = "aporte";
@@ -1410,7 +1411,9 @@ function renderConfluencia(){
     d.innerHTML =
       '<span class="sig" style="color:' + col + '">' + (ap > 0 ? "+" : ap < 0 ? "−" : "·") + '</span>' +
       '<span class="tf">' + esc(t.label) + '</span>' +
-      '<span class="txt">' + esc(nombreSesgo(t.sesgo)) + '</span>' +
+      '<span class="txt">' + esc(nombreSesgo(t.sesgo)) +
+        ' <span style="color:' + (t.id === ESCALERA.contexto && c.vetado ? "var(--red)" : "var(--dim)") + '">· ' +
+        PAPELES[t.id] + (t.id === ESCALERA.contexto && c.vetado ? " · veta" : "") + '</span></span>' +
       '<span class="val" style="color:' + col + ';font-weight:700">' + (ap > 0 ? "+" : "") + fmt(ap, 0) + '</span>';
     lista.appendChild(d);
   });
@@ -1614,7 +1617,7 @@ function initArrastre(){
 }
 
 /* ================= los dos pasos del análisis =================
-   Paso 1: la IA mira las cuatro capturas y devuelve sesgo, nota y niveles.
+   Paso 1: la IA mira las tres capturas y devuelve sesgo, nota y niveles.
    Paso 2: con eso ya aplicado, la app calcula la estrategia y le pide a la IA
    que valore la operación resultante. Separarlo importa: el segundo paso
    necesita números que solo existen después del primero. */
@@ -1669,7 +1672,9 @@ datosVivo() + "\n\n" +
 "estructura— escribe literalmente NO LEGIBLE y sigue. Nadie te va a penalizar por dejar huecos; inventarlos sí " +
 "estropea la operación que se monte después.\n\n" +
 
-"Responde en texto normal, sin JSON y sin tablas, con un apartado por temporalidad y este contenido en cada uno:\n" +
+  "Responde en texto normal, sin JSON y sin tablas. Separa obligatoriamente cada captura con estos marcadores " +
+  "exactos: <<<CAPTURA_1>>>...<<<FIN_CAPTURA_1>>>, y repite hasta CAPTURA_" + cap.imgs.length + ". " +
+  "Dentro de cada bloque escribe la etiqueta de temporalidad y este contenido:\n" +
 "- la etiqueta de la temporalidad tal y como te la he dado\n" +
 "- sesgo, como número entero: -2 bajista fuerte, -1 bajista, 0 neutro, 1 alcista, 2 alcista fuerte\n" +
 "- estructura, en una o dos frases\n" +
@@ -1695,6 +1700,16 @@ datosVivo() + "\n\n" +
   });
 }
 
+function separarLecturas(texto, cantidad){
+  var lecturas = [];
+  for(var i = 1; i <= cantidad; i++){
+    var patron = new RegExp("<<<CAPTURA_" + i + ">>>([\\s\\S]*?)<<<FIN_CAPTURA_" + i + ">>>", "i");
+    var encontrada = String(texto || "").match(patron);
+    lecturas.push(encontrada ? encontrada[1].trim() : "");
+  }
+  return lecturas;
+}
+
 /* --- 2ª llamada: montar las operaciones, sin imágenes y sin creatividad --- */
 function pasoMontar(lectura, cap){
   var instruccion =
@@ -1709,14 +1724,16 @@ datosVivo() + "\n\n" +
 
 "===== LECTURA DE LOS GRÁFICOS =====\n" + lectura + "\n===== FIN DE LA LECTURA =====\n\n" +
 
-"PROPÓN DOS OPERACIONES, independientes entre sí:\n" +
-"- Una INTRADÍA, para abrir y cerrar dentro de las próximas horas. El gatillo está en 15m o 1H.\n" +
-"- Una de SWING, para mantener entre 3 y 4 días. El gatillo está en 4H o 1D.\n\n" +
+"PROPÓN UNA SOLA OPERACIÓN, INTRADÍA: se abre y se cierra dentro de las próximas horas. Se decide con la " +
+"escalera 4H → 1H → 15m y solo con ella: 4H manda y fija la dirección permitida, 1H da la zona donde esperar, " +
+"15m el gatillo. Si 4H va en contra de la idea, no hay operación: pon operar en false.\n" +
+"No propongas nada para mantener días. Si lo que ves solo tendría sentido en un horizonte más largo, dilo en " +
+"motivo_no y pon operar en false; no lo reetiquetes como intradía para poder entregar algo.\n\n" +
 
-"Pueden ir en direcciones opuestas si es lo que dice la lectura; no fuerces que coincidan. Y si una de las dos " +
-"no tiene sentido ahora mismo, pon operar en false: no hay ninguna obligación de encontrar un trade.\n\n" +
+"Y si ahora mismo no hay nada que merezca la pena, pon operar en false: no hay ninguna obligación de " +
+"encontrar un trade.\n\n" +
 
-"Para cada operación que sí propongas:\n" +
+"Si la propones:\n" +
 "- entrada, stop y tres objetivos, en precios concretos\n" +
 "- el stop va DETRÁS de una estructura de la lectura, nunca a una distancia arbitraria ni en el número redondo " +
 "donde se acumulan los stops de todo el mundo. Contrasta su distancia con el rango de 24 h de arriba: un stop " +
@@ -1741,12 +1758,12 @@ datosVivo() + "\n\n" +
 "Responde SOLO con este JSON, sin texto alrededor:\n" +
 '{"activo":"","lectura":[{"temporalidad":"","sesgo":0,"estructura":"","nota":""}],' +
 '"niveles":[{"precio":0,"tf":""}],' +
-'"operaciones":[{"horizonte":"intradia","operar":true,"motivo_no":"","direccion":"largo",' +
+'"operacion":{"operar":true,"motivo_no":"","direccion":"largo",' +
 '"entrada":0,"stop":0,"tp1":0,"tp2":0,"tp3":0,"tp3_proyectado":false,' +
-'"disparador":"","invalidacion":"","si_falla":"","confianza":"media","razon":""}],"aviso":""}\n\n' +
+'"disparador":"","invalidacion":"","si_falla":"","confianza":"media","razon":""},"aviso":""}\n\n' +
 "En 'lectura' va una entrada por cada temporalidad de la lectura de arriba, con su sesgo entero de -2 a 2, " +
 "copiando lo que dijo el operador. En 'niveles' van los suyos, sin añadir ninguno. " +
-"En 'operaciones' van exactamente dos entradas, la primera con horizonte 'intradia' y la segunda 'swing'. " +
+"En 'operacion' va una sola, la intradía. " +
 "En 'aviso' recoges sus avisos más cualquier pega que le veas tú a la operación.";
 
   // temperature 0: con la misma lectura, las mismas cuentas.
@@ -1755,10 +1772,11 @@ datosVivo() + "\n\n" +
 
 function pasoLeerGraficos(){
   var cap = bloquesCapturas();
-  if(cap.imgs.length < 4) return Promise.reject(new Error("faltan capturas: la IA necesita las cuatro"));
+  if(cap.imgs.length < S.tfs.length) return Promise.reject(new Error("faltan capturas: la IA necesita las tres"));
 
   return pasoVer(cap).then(function(lectura){
-    iaTrabajando = "gráficos leídos · montando las dos operaciones…";
+    iaLecturasPrevias = separarLecturas(lectura, cap.imgs.length);
+    iaTrabajando = "gráficos leídos · montando la operación…";
     pintarIA();
     return pasoMontar(lectura, cap);
   }).then(function(r){
@@ -1785,14 +1803,16 @@ function pasoLeerGraficos(){
       if(nuevos.length) S.niveles = nuevos.slice(0, 14);
     }
 
-    // --- las dos operaciones: entran en la lista de operaciones guardadas ---
+    // --- la operación: entra en la lista de operaciones guardadas ---
+    // Se acepta tanto 'operacion' como el 'operaciones' de la versión anterior:
+    // el modelo a veces devuelve la forma vieja aunque el prompt pida la nueva.
     S.ia.operaciones = [];
     var ahora = new Date(), creada = null;
-    (Array.isArray(d.operaciones) ? d.operaciones : []).slice(0, 2).forEach(function(o, i){
-      var swing = /swing|dia|día/i.test(String(o.horizonte || "")) && !/intra/i.test(String(o.horizonte || ""));
-      var nombre = swing ? "Operativa 2 · swing 3-4 días" : "Operativa 1 · intradía";
+    var lista = d.operacion ? [d.operacion]
+      : (Array.isArray(d.operaciones) ? d.operaciones : []);
+    lista.slice(0, 1).forEach(function(o){
+      var nombre = "Operativa intradía";
       var ficha = {
-        horizonte: swing ? "swing" : "intradía",
         nombre: nombre,
         operar: o.operar !== false,
         motivo_no: String(o.motivo_no || ""),
@@ -1809,15 +1829,15 @@ function pasoLeerGraficos(){
       var precios = [ficha.entrada, ficha.stop, ficha.tp1, ficha.tp2, ficha.tp3];
       if(ficha.operar && precios.every(function(v){ return isFinite(v) && v > 0; })){
         var op = {
-          id: "ia-" + (swing ? "swing" : "intra") + "-" + ahora.getTime(),
-          nombre: nombre, estrategia: null, horizonte: ficha.horizonte,
+          id: "ia-intra-" + ahora.getTime(),
+          nombre: nombre, estrategia: null,
           fecha: ahora.toISOString(), dir: ficha.dir,
           nota: ficha.razon || ficha.disparador,
           entrada:ficha.entrada, stop:ficha.stop, tp1:ficha.tp1, tp2:ficha.tp2, tp3:ficha.tp3
         };
         S.ops.unshift(op);
         ficha.id = op.id;
-        if(!creada) creada = op.id;      // se activa la intradía, que es la primera
+        if(!creada) creada = op.id;
       } else {
         ficha.operar = false;
       }
@@ -1848,7 +1868,7 @@ function pasoValorarOperacion(){
     "Sesgo ponderado: " + (c.dir === "long" ? "LARGO" : c.dir === "short" ? "CORTO" : "SIN SESGO") +
       " (" + c.score + ")\n" +
     "Niveles: " + S.niveles.map(function(l){ return fmtP(l.p) + (l.tf ? "/" + l.tf : ""); }).join(", ") + "\n\n" +
-    "Operación propuesta" + (est ? " por la estrategia \"" + est.nombre + "\" (" + est.horizonte + ", " + est.lema + ")" : " a mano") + ":\n" +
+    "Operación propuesta" + (est ? " por la estrategia \"" + est.nombre + "\" (" + est.lema + ")" : " a mano") + ":\n" +
     "- dirección " + (o.dir === "long" ? "largo" : "corto") + "\n" +
     "- entrada " + fmtP(o.entrada) + " · stop " + fmtP(o.stop) + "\n" +
     "- objetivos " + fmtP(o.tp1) + " / " + fmtP(o.tp2) + " / " + fmtP(o.tp3) + "\n" +
@@ -1879,11 +1899,47 @@ function pasoValorarOperacion(){
 var iaOcupada = false;
 var iaTrabajando = null;    // texto del paso en curso
 var iaError = null;         // último fallo, hasta el siguiente intento
+var iaLecturasPrevias = []; // lectura visual separada antes de montar las operativas
+
+function pintarPreanalisis(){
+  var panel = el("ia-preanalisis");
+  var visible = iaOcupada || iaLecturasPrevias.length || S.ia.cuando;
+  panel.hidden = !visible;
+  if(!visible){ panel.innerHTML = ""; return; }
+
+  var leyendo = iaOcupada && !iaLecturasPrevias.length;
+  var sintetizando = iaOcupada && iaLecturasPrevias.length;
+  var tarjetas = S.tfs.map(function(t, i){
+    var lectura = iaLecturasPrevias[i] || (S.ia.cuando ? t.nota : "");
+    var cuerpo = lectura
+      ? '<div class="ia-lectura-txt">' + esc(lectura) + "</div>"
+      : '<div><div class="ia-esqueleto"></div><div class="ia-esqueleto"></div><div class="ia-esqueleto"></div></div>';
+    return '<div class="ia-lectura">' +
+      '<img src="' + t.img + '" alt="Captura ' + esc(t.label) + '">' +
+      '<div><div class="ia-cab"><span class="ia-ver" style="color:var(--violet)">' + esc(t.label) + '</span>' +
+        '<span class="badge">captura ' + (i + 1) + "</span></div>" + cuerpo + "</div></div>";
+  }).join("");
+
+  var estadoSintesis = sintetizando
+    ? '<span class="girando" style="color:var(--amber)">▚</span> montando el análisis completo y la operativa…'
+    : S.ia.cuando
+      ? '<span style="color:var(--amber)">■</span> análisis completo preparado'
+      : '<span style="color:var(--dim)">□</span> la síntesis empieza al terminar las tres lecturas';
+  var previaSintesis = sintetizando
+    ? '<div class="ia-rejilla"><div class="ia-caja"><span class="ia-ver">Operativa intradía</span>' +
+        '<div class="ia-esqueleto"></div><div class="ia-esqueleto"></div><div class="ia-esqueleto"></div></div></div>'
+    : "";
+
+  panel.innerHTML = '<div class="ia-flujo-cab"><span class="ia-ver" style="color:var(--white)">lectura por captura</span>' +
+    '<span class="ia-etapa ' + (leyendo ? "on" : "") + '">01 leer · <span class="' + (sintetizando ? "on" : "") +
+    '">02 sintetizar</span></span></div><div class="ia-lecturas">' + tarjetas +
+    '</div><div class="ia-sintesis">' + estadoSintesis + "</div>" + previaSintesis;
+}
 
 function analizarConIA(){
   if(iaOcupada) return;
-  if(S.tfs.filter(function(t){ return t.img; }).length < 4){
-    eco("añade las cuatro capturas antes de analizar");
+  if(S.tfs.filter(function(t){ return t.img; }).length < S.tfs.length){
+    eco("añade las tres capturas antes de analizar");
     return;
   }
   if(!servidorIA.listo){
@@ -1894,6 +1950,7 @@ function analizarConIA(){
   }
   iaOcupada = true;
   iaError = null;
+  iaLecturasPrevias = [];
   S.ia.valoracion = null;
   iaTrabajando = "pidiendo el precio a Binance…";
   el("btn-ia").disabled = true;
@@ -1905,7 +1962,7 @@ function analizarConIA(){
     .then(function(){ precioDeMercado(); }, function(){ /* se sigue con lo que haya */ })
     .then(function(){
       renderActivo();
-      iaTrabajando = "leyendo las cuatro capturas…";
+      iaTrabajando = "leyendo las tres capturas…";
       pintarIA();
       return pasoLeerGraficos();
     })
@@ -1943,6 +2000,7 @@ function pedirOpinion(){
 function pintarIA(){
   var c = el("ia-valoracion"), partes = [];
   var progreso = el("ia-progreso");
+  pintarPreanalisis();
 
   if(iaTrabajando){
     progreso.hidden = false;
@@ -1971,7 +2029,7 @@ function pintarIA(){
     partes.push('<div class="aviso" style="margin-top:10px">// la IA no pudo responder: ' + esc(iaError) + "</div>");
   }
 
-  // --- las dos operaciones propuestas ---
+  // --- la operación propuesta ---
   var ops = S.ia.operaciones || [];
   if(ops.length){
     partes.push('<div class="ia-rejilla">' + ops.map(function(o){
@@ -1979,18 +2037,15 @@ function pintarIA(){
       if(!o.operar){
         return '<div class="ia-caja"><div class="ia-cab">' +
           '<span class="ia-ver" style="color:var(--amber)">' + esc(o.nombre) + "</span>" +
-          '<span class="badge">' + esc(o.horizonte) + "</span></div>" +
+          "</div>" +
           '<div class="ia-txt" style="color:var(--amber)">· no operar</div>' +
-          '<div class="ia-txt">' + esc(o.motivo_no || "la IA no ve una entrada clara") + "</div></div>";
+          (o.motivo_no ? '<div class="ia-txt">' + esc(o.motivo_no) + "</div>" : "") + "</div>";
       }
-      var riesgo = o.dir === "long" ? o.entrada - o.stop : o.stop - o.entrada;
-      var rr = riesgo > 0 ? (o.dir === "long" ? o.tp1 - o.entrada : o.entrada - o.tp1) / riesgo : NaN;
       var filas = [
         ["dirección", o.dir === "long" ? "largo" : "corto", col],
         ["entrada", fmtP(o.entrada), "var(--white)"],
         ["stop", fmtP(o.stop), "var(--red)"],
-        ["objetivos", fmtP(o.tp1) + " · " + fmtP(o.tp2) + " · " + fmtP(o.tp3) + (o.tp3prov ? " *" : ""), "var(--green)"],
-        ["R:R al 1º", isFinite(rr) ? fmt(rr, 2) : "—", rr >= 1.5 ? "var(--green)" : "var(--amber)"]
+        ["objetivos", fmtP(o.tp1) + " · " + fmtP(o.tp2) + " · " + fmtP(o.tp3) + (o.tp3prov ? " *" : ""), "var(--green)"]
       ].map(function(f){
         return '<div class="est-fila"><span>' + f[0] + '</span><span style="color:' + f[2] +
                ';font-weight:700">' + f[1] + "</span></div>";
@@ -1998,7 +2053,6 @@ function pintarIA(){
       var activa = o.id && o.id === S.opId;
       return '<div class="ia-caja' + (activa ? " ia-activa" : "") + '"><div class="ia-cab">' +
         '<span class="ia-ver" style="color:' + col + '">' + esc(o.nombre) + "</span>" +
-        '<span class="badge">' + esc(o.horizonte) + "</span>" +
         (o.confianza ? '<span class="badge">confianza ' + esc(o.confianza) + "</span>" : "") + "</div>" +
         '<div class="ia-txt">' + esc(o.razon) + "</div>" +
         '<div class="est-tabla">' + filas + "</div>" +
@@ -2035,29 +2089,10 @@ function pintarIA(){
 }
 
 function pintarAjustes(){
-  var e = el("srv-estado");
-  if(!servidorIA.consultado){
-    e.className = "aviso amb"; e.removeAttribute("style"); e.innerHTML = "// comprobando el servidor…";
-  } else if(servidorIA.listo){
-    e.className = "aviso amb";
-    e.setAttribute("style", "border-color:var(--green);background:rgba(78,204,163,.08);color:var(--green)");
-    e.innerHTML = "// servidor listo · modelo por defecto " + esc(servidorIA.modelo) +
-      (servidorIA.protegido ? " · protegido con clave de acceso"
-                            : " · <b>sin clave de acceso: la URL es pública</b>");
-  } else {
-    e.className = "aviso"; e.removeAttribute("style");
-    e.innerHTML = "// " + esc(servidorIA.error || "el servidor de IA no responde");
-  }
-
-  if(document.activeElement !== el("i-modelo")) el("i-modelo").value = S.ia.modelo || "";
-  el("ia-estado").textContent = !servidorIA.listo ? "sin servidor"
-    : S.ia.cuando ? "último análisis " + new Date(S.ia.cuando).toLocaleTimeString("es-ES", {hour:"2-digit", minute:"2-digit"})
-    : "listo";
-
   var b = el("btn-ia");
   var listas = S.tfs.filter(function(t){ return t.img; }).length;
   b.innerHTML = "[<b>" + (servidorIA.listo ? "analizar con IA" : "analizar con IA (sin servidor)") + "</b>]";
-  b.disabled = listas < 4 || iaOcupada;
+  b.disabled = listas < S.tfs.length || iaOcupada;
 
   var r = S.ia.resumen, extra = el("aviso-activo");
   if(r && r.aviso){
@@ -2070,7 +2105,7 @@ function pintarAjustes(){
    bien la operación que propondría, o bien el motivo por el que no es momento
    de entrar. Lo segundo es tan útil como lo primero. */
 function evaluar(est){
-  var r = est.calc(contexto(est.horizonte));
+  var r = est.calc(contexto());
   if(!r) return {ok:false, motivo:"faltan niveles a un lado del precio", r:null};
   var tk = tick(S.precio);
   ["entrada","stop","tp1","tp2","tp3"].forEach(function(f){ r[f] = Math.round(r[f]/tk)*tk; });
@@ -2121,8 +2156,7 @@ function renderEstrategias(){
 
     card.innerHTML =
       '<h3 class="est-nom">' + esc(est.nombre) + "</h3>" +
-      '<div class="est-cab"><span class="badge">' + est.horizonte + '</span>' +
-        '<span class="badge">' + est.regimen + "</span></div>" +
+      '<div class="est-cab"><span class="badge">' + est.regimen + "</span></div>" +
       '<div class="est-lema">' + esc(est.lema) + "</div>" +
       '<div class="est-resumen">' + esc(r ? r.nota : est.detalle) + "</div>" +
       cuerpo +
@@ -2363,8 +2397,7 @@ function textoPlan(){
          "  (" + (c.score > 0 ? "+" : "") + c.score + ")");
   L.push("  temporalidad  " + S.tfs.map(function(t){ return t.label + ":" + nombreSesgo(t.sesgo); }).join("  "));
   L.push("");
-  L.push("  estrategia    " + opActiva().nombre +
-         (opActiva().horizonte ? "  (" + opActiva().horizonte + ")" : ""));
+  L.push("  estrategia    " + opActiva().nombre);
   L.push("  dirección     " + (dirActiva() === "long" ? "largo" : "corto"));
   L.push("  entrada       " + fmtP(s.entrada));
   L.push("  stop          " + fmtP(s.stop) + "   (" + fmt(m.pctStop, 2) + " %)");
@@ -2404,19 +2437,19 @@ function pintarPlan(){
 function pintarVista(){
   var conCapturas = S.tfs.filter(function(t){ return t.img; }).length;
   el("analisis").hidden = vista !== "analisis";
-  ["caja-veredicto","lbl-sesgo","ver-nota"].forEach(function(id){
-    el(id).hidden = vista !== "analisis";
-  });
+  // La cabecera antigua calculaba un veredicto local a partir de pesos fijos.
+  // Se mantiene fuera de la vista: el único análisis visible llega de la API.
+  ["caja-veredicto","lbl-sesgo","ver-nota"].forEach(function(id){ el(id).hidden = true; });
   el("btn-ultimo").hidden = !(vista === "inicio" && S.ia.cuando);
   el("btn-ultimo").innerHTML = "[<b>ver el último análisis IA</b>]";
   el("eco-sup").textContent = vista === "inicio"
-    ? (conCapturas ? "// tienes un análisis guardado" : "// añade las cuatro capturas para empezar")
-    : "// " + S.activo + " · " + conCapturas + "/4 capturas";
+    ? (conCapturas ? "// tienes un análisis guardado" : "// añade las tres capturas para empezar")
+    : "// " + S.activo + " · " + conCapturas + "/" + S.tfs.length + " capturas";
   el("pie").hidden = vista !== "analisis";
 }
 
 function pintarPlegados(){
-  [["niveles","sec-niveles"], ["mapa","sec-mapa"], ["ajustes","sec-ajustes"]].forEach(function(par){
+  [["ajustes","sec-ajustes"]].forEach(function(par){
     var plegada = !!S.plegado[par[0]];
     el(par[1]).classList.toggle("plegada", plegada);
     var b = document.querySelector('.plegar[data-plegar="' + par[0] + '"]');
@@ -2425,11 +2458,6 @@ function pintarPlegados(){
       b.querySelector(".tri").textContent = plegada ? "▸" : "▾";
     }
   });
-  // Con el mapa plegado, la cabecera resume la operación en una línea.
-  var m = metricas(), o = opActiva();
-  el("mapa-resumen").textContent = (o.dir === "long" ? "largo" : "corto") +
-    (m.valido && isFinite(m.rr1) ? " · " + fmt(m.rr1, 2) + " R" : "") +
-    (S.plegado.mapa ? "" : " · arrastra las líneas");
 }
 
 function abrirAnalisis(){
@@ -2443,16 +2471,7 @@ function pintarTodo(){
   renderActivo();
   renderTFs();
   avisosActivo();
-  renderConfluencia();
-  renderNiveles();
-  renderEstrategias();
-  renderSelectorOps();
-  pintarOpInputs();
-  if(document.activeElement !== el("i-atr")) el("i-atr").value = fmt(atr(), 0);
-  pintarOperacion();
-  pintarRiesgo();
   pintarValidacion();
-  pintarPlan();
   pintarPlegados();
   pintarIA();
   pintarAjustes();
@@ -2490,6 +2509,7 @@ function meterImagen(i, file){
     S.ia.cuando = null;
     S.ia.resumen = null;
     S.ia.operaciones = [];
+    iaLecturasPrevias = [];
     vista = "inicio";
     slotActivo = Math.min(3, i + 1);
     guardar();
@@ -2520,7 +2540,7 @@ function conectar(){
     var q = e.target.closest("[data-quitar]");
     if(q){
       S.tfs[+q.getAttribute("data-quitar")].img = null;
-      S.ia.cuando = null; S.ia.resumen = null; S.ia.operaciones = []; vista = "inicio";
+      S.ia.cuando = null; S.ia.resumen = null; S.ia.operaciones = []; iaLecturasPrevias = []; vista = "inicio";
       guardar(); renderTFs(); pintarVista(); return;
     }
   });
@@ -2531,7 +2551,7 @@ function conectar(){
     var q = e.target.closest("[data-quitar]");
     if(q){
       S.tfs[+q.getAttribute("data-quitar")].img = null;
-      S.ia.cuando = null; S.ia.resumen = null; S.ia.operaciones = []; vista = "inicio";
+      S.ia.cuando = null; S.ia.resumen = null; S.ia.operaciones = []; iaLecturasPrevias = []; vista = "inicio";
       guardar(); renderTFs(); pintarVista();
     }
   });
@@ -2574,7 +2594,7 @@ function conectar(){
   }
   el("btn-limpiar-img").addEventListener("click", function(){
     S.tfs.forEach(function(t){ t.img = null; });
-    S.ia.cuando = null; S.ia.resumen = null; S.ia.operaciones = []; vista = "inicio";
+    S.ia.cuando = null; S.ia.resumen = null; S.ia.operaciones = []; iaLecturasPrevias = []; vista = "inicio";
     guardar(); renderTFs(); pintarVista();
   });
 
@@ -2648,20 +2668,6 @@ function conectar(){
     guardar(); pintarPlegados();
     el("sec-ajustes").scrollIntoView({behavior: reducido() ? "auto" : "smooth", block:"start"});
   });
-  el("i-modelo").addEventListener("change", function(){
-    S.ia.modelo = this.value.trim() || (servidorIA.modelo || "route-llm");
-    this.value = S.ia.modelo;
-    guardar(); eco("modelo: " + S.ia.modelo);
-  });
-  el("i-acceso").addEventListener("change", function(){
-    guardarAcceso(this.value.trim());
-    this.value = "";
-    eco(leerAcceso() ? "clave de acceso guardada en este navegador" : "clave de acceso borrada");
-  });
-  el("btn-recomprobar").addEventListener("click", function(){
-    servidorIA.consultado = false; pintarAjustes();
-    comprobarServidor().then(function(){ pintarTodo(); });
-  });
   el("btn-probar").addEventListener("click", function(){
     el("ia-eco").textContent = "// probando…";
     el("ia-eco").style.color = "var(--dim)";
@@ -2702,6 +2708,7 @@ function conectar(){
     var modelo = S.ia.modelo;               // el modelo y la clave de acceso no se tocan
     S = estadoBase();
     S.ia.modelo = modelo;
+    iaLecturasPrevias = [];
     S.atr = null;
     try{ localStorage.removeItem(LS); }catch(e){}
     S.tfs.forEach(function(t){ t.img = null; t.activo = null; });
@@ -2709,7 +2716,7 @@ function conectar(){
     vista = "inicio";
     precioDeMercado();          // conserva el precio de mercado ya consultado
     sincronizarInputs(); pintarTodo();
-    eco("análisis nuevo: añade las cuatro capturas");
+    eco("análisis nuevo: añade las tres capturas");
   });
 
   /* --- estrategias --- */
@@ -2944,7 +2951,6 @@ function sincronizarInputs(){
 cargar();
 sincronizarInputs();
 conectar();
-initArrastre();
 cerrarLupa();
 
 var listo = function(){
@@ -2952,8 +2958,6 @@ var listo = function(){
   el("app").hidden = false;
   el("pie").hidden = false;
   pintarTodo();
-  // El SVG necesita un ancho ya medido para colocar el eje.
-  requestAnimationFrame(function(){ renderMapa(); });
 };
 
 // El precio de apertura se pide a Binance mientras corre la barra de carga,

@@ -1,7 +1,7 @@
-# Dashboard Trading Operation
+# Intraday
 
-Dashboard local para preparar una operación a partir de **cuatro capturas del
-mismo activo en distintas temporalidades**. Se cargan los gráficos, se marca el
+Dashboard local para preparar **una operación intradía** a partir de **tres
+capturas del mismo activo**: 4H, 1H y 15m. Se cargan los gráficos, la IA lee el
 sesgo de cada uno, y la herramienta calcula el sesgo ponderado, coloca entrada,
 stop y objetivos sobre el eje de precio real y saca el tamaño de posición.
 
@@ -11,20 +11,27 @@ las capturas no se suben a ningún sitio.
 
 ## Qué hace
 
-**Flujo.** Al abrir solo se ve la cabecera y los cuatro huecos: el análisis
-llega plegado y se despliega al completar la cuarta captura. Arriba,
+**Flujo.** Al abrir solo se ve la cabecera y los tres huecos: el análisis
+llega plegado y se despliega al completar la tercera captura. Arriba,
 `nuevo análisis` limpia y vuelve al inicio; `ver el último análisis` reabre el
 que hubiera guardado, con sus capturas. Al recargar siempre se arranca en el
 inicio, sin perder nada.
 
-**Evidencia.** Cuatro huecos, uno por temporalidad (1D / 4H / 1H / 15m, o las
-que quieras). Las capturas se cargan por clic, arrastre o `ctrl+v`, con lupa
+**Evidencia.** Tres huecos, uno por peldaño de la escalera: 4H, 1H y 15m. Las
+capturas se cargan por clic, arrastre o `ctrl+v`, con lupa
 para verlas a tamaño completo. Se reescalan antes de guardarse en el navegador,
 y si no caben la página lo dice en vez de fallar en silencio.
 
-**Confluencia.** Cada temporalidad aporta un sesgo, ponderado según su altura:
-40/30/20/10. De ahí sale un veredicto de largo, corto o sin sesgo, con el
-desglose de lo que aporta cada una.
+**Confluencia.** La escalera del intradía, con el salto de factor 4-6x entre
+peldaños del Triple Screen de Elder: **4H** fija la dirección permitida (peso
+50), **1H** da la zona donde esperar (30) y **15m** el gatillo (20). De ahí sale
+un veredicto de largo, corto o sin sesgo, con el desglose de lo que aporta cada
+peldaño y su papel.
+
+4H no vota: **veta**. Si va en contra de la dirección que sale de la suma, no
+hay operación por mucho que 1H y 15m se pongan de acuerdo. Por encima de 4H no
+se sube, porque una vela diaria no llega a cerrar dentro de una operación que se
+abre y se cierra en el día.
 
 Ese sesgo lo pone la IA al analizar las capturas; no se marca a mano. Sin
 servidor de IA se queda en neutro, y con él la confluencia y las cuatro
@@ -76,22 +83,22 @@ otra época.
 maneras distintas y guardan cada resultado como una operación con su hora, para
 poder saltar de una a otra en el desplegable y comparar:
 
-| Estrategia | Horizonte | Régimen | Qué hace |
-|---|---|---|---|
-| Ruptura de rango | swing | tendencia | Entra al superar el techo del rango y proyecta su altura. Acierta poco, pero el ganador medio es varias veces el perdedor medio. |
-| Retroceso en tendencia | swing | tendencia | Compra la corrección al primer soporte, con el stop detrás de la siguiente estructura. Es la de mayor porcentaje de aciertos. |
-| Barrido de liquidez | intradía | cualquiera | Entra en el nivel que acaba de barrer los stops, con el stop pegado bajo la mecha. R:R alto por lo ceñido del stop. |
-| Vuelta al rango | intradía | rango | Reversión a la media: opera contra el extremo buscando el centro. La dirección la marca la posición del precio, no el sesgo. |
+| Estrategia | Régimen | Qué hace |
+|---|---|---|
+| Ruptura de rango | tendencia | Entra al superar el techo del rango y proyecta su altura. Acierta poco, pero el ganador medio es varias veces el perdedor medio. |
+| Retroceso en tendencia | tendencia | Compra la corrección al primer soporte, con el stop detrás de la siguiente estructura. Es la de mayor porcentaje de aciertos. |
+| Barrido de liquidez | cualquiera | Entra en el nivel que acaba de barrer los stops, con el stop pegado bajo la mecha. R:R alto por lo ceñido del stop. |
+| Vuelta al rango | rango | Reversión a la media: opera contra el extremo buscando el centro. La dirección la marca la posición del precio, no el sesgo. |
 
-Cada una ocupa una columna con su título, su horizonte y su régimen, el
-resumen de lo que lee en tus gráficos, y el veredicto: o la operación completa
-(dirección, entrada, stop, objetivo y R:R), o un `no es momento de entrar` con
-el motivo. Saber cuándo quedarse fuera vale tanto como la entrada.
+Cada una ocupa una columna con su título y su régimen, el resumen de lo que lee
+en tus gráficos, y el veredicto: o la operación completa (dirección, entrada,
+stop, objetivo y R:R), o un `no es momento de entrar` con el motivo. Saber
+cuándo quedarse fuera vale tanto como la entrada.
 
-Las de swing usan solo los niveles de temporalidad alta (4H en adelante) y un
-rango de vela tres veces mayor; las de intradía usan todos. La sección marca
-cuáles encajan con el régimen de ahora mismo: con el sesgo marcado mandan las
-de tendencia, y con las temporalidades en desacuerdo mandan las de reversión.
+Las cuatro se calculan a la escala del intradía, sobre todos los niveles. La
+sección marca cuáles encajan con el régimen de ahora mismo: con el sesgo marcado
+mandan las de tendencia, y con las temporalidades en desacuerdo mandan las de
+reversión.
 
 Las cifras de referencia salen de backtests publicados, no de uno propio: son
 un punto de partida razonable, no una promesa de resultados.
@@ -116,7 +123,7 @@ No hace falta instalar nada. El único script del repo genera el fragmento que
 se publica como artefacto en claude.ai:
 
 ```bash
-node scripts/build-artifact.mjs   # index.html -> dist/dashboard-trading-operation.part.html
+node scripts/build-artifact.mjs   # index.html -> dist/intraday.part.html
 ```
 
 `index.html` es la fuente; `dist/` no se versiona.
@@ -143,7 +150,7 @@ Con la función desplegada hay dos botones, y hacen cosas distintas.
 Primero **refresca el precio en Binance**, porque ese dato entra en los dos
 prompts que vienen después. Luego van dos llamadas separadas:
 
-1. **Ver.** Las cuatro capturas, y ningún formato que cumplir. Se le pide una
+1. **Ver.** Las tres capturas, y ningún formato que cumplir. Se le pide una
    lectura en prosa: estructura de cada gráfico, sesgo, y los niveles con su
    margen de error. Esto último importa más de lo que parece: el eje de precios
    de una captura de TradingView está comprimido, así que una mecha se lee con
@@ -153,7 +160,7 @@ prompts que vienen después. Luego van dos llamadas separadas:
    consigue leer; sin campos que rellenar, puede decir que no los ve.
 2. **Montar.** Sin imágenes, solo el texto de la anterior más los datos de
    mercado, y `temperature: 0`. Aquí sale el JSON con los sesgos, los niveles y
-   las dos operaciones. El R:R, el orden de los objetivos y el lado del stop son
+   la operación. El R:R, el orden de los objetivos y el lado del stop son
    aritmética, no criterio: conviene que salgan iguales dos veces seguidas con
    la misma lectura.
 
@@ -172,22 +179,22 @@ dos prompts llevan, del ticker de Binance:
 - la **variación de 24 h**;
 - el **máximo y el mínimo de 24 h**, que es la escala de volatilidad real del
   día y sirve para dimensionar el stop sin deducirlo de los píxeles. El prompt
-  traduce ese rango a un orden de magnitud para el stop intradía y para el de
-  swing, y pide que cualquier stop muy fuera de esa escala venga justificado.
+  traduce ese rango a un orden de magnitud para el stop intradía, y pide que
+  cualquier stop muy fuera de esa escala venga justificado.
 
 Si Binance no responde, el prompt lo dice con esas palabras —precio escrito a
 mano, sin confirmar— en vez de presentarlo como un dato fiable.
 
-Y además propone **dos operaciones**: una intradía, con el gatillo en 15m o 1H,
-y otra de swing para 3 o 4 días, con el gatillo en 4H o 1D. Pueden ir en
-direcciones opuestas si eso es lo que dicen los gráficos. Cada una trae entrada,
-stop, tres objetivos, el disparador que confirma la entrada, la invalidación que
-mata la idea y qué hacer si falla. Las operables se guardan como operaciones
-normales, así que aparecen en el desplegable, se dibujan en el mapa y se
-dimensionan con el panel de riesgo como cualquier otra.
+Y además propone **una operación intradía**, decidida con la escalera
+4H → 1H → 15m y solo con ella: si 4H va en contra, no hay operación. Trae
+entrada, stop, tres objetivos, el disparador que confirma la entrada, la
+invalidación que mata la idea y qué hacer si falla. Si es operable se guarda como
+una operación normal, así que aparece en el desplegable, se dibuja en el mapa y
+se dimensiona con el panel de riesgo como cualquier otra.
 
-El prompt le da permiso explícito para no proponer nada: si una de las dos no
-tiene sentido, devuelve `no operar` y el motivo, con la dirección en `null` y
+El prompt le da permiso explícito para no proponer nada —y le prohíbe colar como
+intradía algo que solo tendría sentido a días—: devuelve `no operar` y el
+motivo, con la dirección en `null` y
 los precios a cero. Un prompt que siempre encuentra un trade encuentra trades
 malos.
 

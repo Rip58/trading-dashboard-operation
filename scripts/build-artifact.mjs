@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Extrae el cuerpo de index.html a dist/dashboard-trading-operation.part.html.
+ * Extrae el cuerpo de index.html a dist/intraday.part.html.
  *
  * index.html es la fuente y funciona sola con doble clic. El fragmento que
  * genera este script es lo que se publica como artefacto en claude.ai, donde
@@ -28,5 +28,5 @@ if (!/<title>/i.test(fragmento)) {
 }
 
 await mkdir(join(raiz, "dist"), { recursive: true });
-await writeFile(join(raiz, "dist", "dashboard-trading-operation.part.html"), fragmento, "utf8");
-console.log(`fragmento: ${fragmento.length} B -> dist/dashboard-trading-operation.part.html`);
+await writeFile(join(raiz, "dist", "intraday.part.html"), fragmento, "utf8");
+console.log(`fragmento: ${fragmento.length} B -> dist/intraday.part.html`);
