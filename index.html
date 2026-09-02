@@ -96,19 +96,36 @@ button,input,select,textarea{font-family:var(--mono); font-size:12px}
 .ia-rejilla .ia-caja{margin-top:0}
 .ia-caja.ia-activa{border-color:var(--amber); background:rgba(226,177,68,.06)}
 .ia-dato{font-size:10px; color:var(--dim); line-height:1.55}
-/* La franja de vigilancia: los precios a escala, no en un párrafo. */
-.franja{margin-top:9px}
-.franja-pista{position:relative; height:15px; background:var(--track); border-radius:1px}
-.franja-banda{position:absolute; top:0; bottom:0; border-radius:1px;
-  background:repeating-linear-gradient(90deg,var(--amber) 0 5px,rgba(0,0,0,.35) 5px 7px)}
-.franja-marca{position:absolute; top:-4px; bottom:-4px; width:2px}
-.franja-marca.ahora{background:var(--white)}
-.franja-marca.muere{background:var(--red)}
-.franja-eje{position:relative; height:12px; margin-top:3px; font-size:9px; color:var(--dim)}
+/* La franja de vigilancia. El color dice la dirección de la operación que se
+   espera —verde comprar, rojo vender—, el naranja dónde muere la idea y el
+   blanco dónde está el precio ahora. Sin esa distinción todo era ámbar y no
+   se sabía si lo que esperabas era un largo o un corto. */
+.franja{margin-top:9px; padding:10px; border:1px solid var(--border);
+  border-left:3px solid var(--dim); border-radius:2px; background:var(--sunk);
+  display:flex; flex-direction:column; gap:11px}
+.franja-cab{display:flex; align-items:baseline; gap:8px; flex-wrap:wrap}
+.franja-cab .tit{font-size:12px; font-weight:700; color:var(--white)}
+.franja-cab .dir{font-size:12px; font-weight:700; letter-spacing:.5px}
+.franja-cab .dist{margin-left:auto; font-size:14px; font-weight:700}
+.franja-cab .pts{font-size:10px; color:var(--dim2)}
+.franja-pista{position:relative; height:26px}
+.franja-pista .via{position:absolute; left:0; right:0; top:11px; height:2px; background:var(--track)}
+.franja-banda{position:absolute; top:5px; height:14px; border-radius:1px}
+.franja-marca{position:absolute}
+.franja-marca.ahora{top:0; bottom:0; width:2px; background:var(--white)}
+.franja-marca.muere{top:2px; bottom:2px; width:1px; background:var(--orange)}
+.franja-eje{position:relative; height:13px; font-size:9px; letter-spacing:.3px}
 .franja-eje b{position:absolute; transform:translateX(-50%); white-space:nowrap; font-weight:400}
-.franja-filas{margin-top:7px; display:grid; grid-template-columns:auto 1fr; gap:2px 8px; font-size:10px}
-.franja-filas dt{color:var(--dim2); text-transform:uppercase; letter-spacing:.3px; font-size:9px}
-.franja-filas dd{margin:0; color:var(--dim); line-height:1.5}
+.franja-fichas{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px}
+.franja-ficha{padding:8px 9px; border-radius:2px; background:var(--track);
+  display:flex; flex-direction:column; gap:2px; min-width:0}
+.franja-ficha .k{font-size:9px; text-transform:uppercase; letter-spacing:.3px; color:var(--dim2)}
+.franja-ficha .v{font-size:12px; font-weight:700}
+.franja-senal{display:flex; gap:8px; align-items:flex-start}
+.franja-senal .k{font-size:9px; text-transform:uppercase; letter-spacing:.3px;
+  color:var(--dim2); flex-shrink:0; padding-top:2px}
+.franja-senal .t{font-size:11px; color:var(--dim2); line-height:1.5}
+@media (max-width:520px){ .franja-fichas{grid-template-columns:1fr} }
 .ia-dato span{display:block; text-transform:uppercase; letter-spacing:.3px; color:var(--dim2); font-size:9px}
 .ia-caja{border:1px solid var(--violet); border-radius:2px; background:rgba(167,139,250,.05);
   padding:10px; margin-top:10px; display:flex; flex-direction:column; gap:6px}
@@ -1839,9 +1856,10 @@ datosVivo() + "\n\n" +
 "- Y en ese caso rellena zona_espera, que es lo único aprovechable de un 'no operar': desde y hasta son los dos " +
 "precios entre los que tendría que meterse el precio para que la idea volviera a valer, sacados de niveles de la " +
 "lectura y no de números redondos; senal es la señal concreta que buscarías ahí, en DOCE PALABRAS COMO MUCHO y " +
-"sin repetir precios; invalida es el precio suelto que mata la idea, un número, no una frase. Esto se lee de un " +
-"vistazo para poner una alarma: no expliques ahí la operación entera. Si operar va en true, deja desde, hasta e " +
-"invalida en 0.\n" +
+"sin repetir precios; invalida es el precio suelto que mata la idea, un número y no una frase; y direccion es " +
+"'largo' o 'corto', la que tendría la operación cuando saltara, porque esperar sin saber si esperas para comprar " +
+"o para vender no sirve de nada. Esto se lee de un vistazo para poner una alarma: no expliques ahí la operación " +
+"entera. Si operar va en true, deja desde, hasta e invalida en 0.\n" +
 "- Los objetivos van en orden: en largo tp1 < tp2 < tp3 y el stop por debajo de la entrada; en corto al revés.\n" +
 "- Nada de lenguaje de vendedor ni de optimismo por defecto. Si la situación es fea, dilo con esas palabras.\n\n" +
 
@@ -1851,7 +1869,7 @@ datosVivo() + "\n\n" +
 '"operacion":{"operar":true,"motivo_no":"","direccion":"largo",' +
 '"entrada":0,"stop":0,"tp1":0,"tp2":0,"tp3":0,"tp3_proyectado":false,' +
 '"disparador":"","invalidacion":"","si_falla":"","confianza":"media","razon":"",' +
-'"zona_espera":{"desde":0,"hasta":0,"senal":"","invalida":0}},"aviso":""}\n\n' +
+'"zona_espera":{"desde":0,"hasta":0,"senal":"","invalida":0,"direccion":"corto"}},"aviso":""}\n\n' +
 "En 'lectura' va una entrada por cada temporalidad de la lectura de arriba, con su sesgo entero de -2 a 2, " +
 "copiando lo que dijo el operador. En 'niveles' van los suyos, sin añadir ninguno. " +
 "En 'operacion' va una sola, la intradía. " +
@@ -1963,6 +1981,7 @@ function pasoLeerGraficos(){
         zonaHasta: o.zona_espera ? +o.zona_espera.hasta : NaN,
         zonaQue:   o.zona_espera ? String(o.zona_espera.senal || o.zona_espera.que_esperar || "") : "",
         zonaInvalida: o.zona_espera ? +o.zona_espera.invalida : NaN,
+        zonaDir:   o.zona_espera ? String(o.zona_espera.direccion || "") : "",
         id: null
       };
       var precios = [ficha.entrada, ficha.stop, ficha.tp1, ficha.tp2, ficha.tp3];
@@ -2160,12 +2179,25 @@ function pedirOpinion(){
    la da, se deduce del nivel más cercano en la dirección del sesgo, con medio
    rango de vela de margen a cada lado — y se dice que es deducida, porque una
    franja calculada por la app no vale lo mismo que una leída del gráfico. */
+/* La dirección que tendría la operación cuando salte. La dice el modelo, que
+   es quien ha leído los gráficos; si no la dice, se cae al sesgo de la
+   escalera, que ya sabe qué permite 4H. Sin ninguna de las dos no se pinta
+   dirección: inventarla sería peor que no decir nada. */
+function dirEsperada(delModelo){
+  var t = String(delModelo || "");
+  if(/cort|short|vend/i.test(t)) return "short";
+  if(/larg|long|compr/i.test(t)) return "long";
+  var c = confluencia();
+  return c.dir === "none" ? null : c.dir;
+}
+
 function zonaDeEspera(o){
   if(o && isFinite(o.zonaDesde) && isFinite(o.zonaHasta) && o.zonaDesde > 0 && o.zonaHasta > 0){
     return {desde: Math.min(o.zonaDesde, o.zonaHasta),
             hasta: Math.max(o.zonaDesde, o.zonaHasta),
             que: o.zonaQue || "",
             invalida: isFinite(o.zonaInvalida) && o.zonaInvalida > 0 ? o.zonaInvalida : NaN,
+            dir: dirEsperada(o.zonaDir),
             propia: true};
   }
   if(!S.niveles.length || !isFinite(S.precio) || !S.precio) return null;
@@ -2174,7 +2206,8 @@ function zonaDeEspera(o){
   else if(ctx.sop.length){ destino = ctx.sop[0].p; que = "reacción en el soporte"; }
   else if(ctx.res.length){ destino = ctx.res[0].p; que = "reacción en la resistencia"; }
   if(destino === null) return null;
-  return {desde: destino - m, hasta: destino + m, que: que, propia: false};
+  return {desde: destino - m, hasta: destino + m, que: que,
+          invalida: NaN, dir: dirEsperada(null), propia: false};
 }
 
 // Corta sin dejar una palabra a medias; el texto entero queda en el title.
@@ -2200,6 +2233,11 @@ function distanciaZona(P, z){
    dónde está el precio, dónde la zona a vigilar y dónde muere la idea, que es
    lo que hace falta para poner la alarma y volver en el momento justo. */
 function pintarFranja(z, P){
+  var corto = z.dir === "short", largo = z.dir === "long";
+  var col = corto ? "var(--red)" : largo ? "var(--green)" : "var(--amber)";
+  var rgb = corto ? "232,83,110" : largo ? "78,204,163" : "226,177,68";
+  var etiq = corto ? "CORTO" : largo ? "LARGO" : "";
+  var accion = corto ? "vender entre" : largo ? "comprar entre" : "zona a vigilar";
   var puntos = [z.desde, z.hasta];
   if(isFinite(P) && P > 0) puntos.push(P);
   if(isFinite(z.invalida)) puntos.push(z.invalida);
@@ -2209,32 +2247,113 @@ function pintarFranja(z, P){
   var pos = function(v){ return ((v - min) / (max - min)) * 100; };
   var dentro = isFinite(P) && P >= z.desde && P <= z.hasta;
 
-  var marcas =
-    '<span class="franja-banda" style="left:' + pos(z.desde) + '%;width:' +
-      (pos(z.hasta) - pos(z.desde)) + '%"></span>' +
+  var borde = isFinite(P) && P > 0 ? (P < z.desde ? z.desde : z.hasta) : NaN;
+  var pts = isFinite(borde) ? fmt(Math.abs(borde - P), 0) + " pts" : "";
+  var pct = isFinite(borde) ? (borde - P) / P * 100 : NaN;
+
+  var cab =
+    '<span class="tit">' + (dentro ? "Zona alcanzada" : "Esperando para entrar") + "</span>" +
+    (etiq ? '<span class="dir" style="color:' + col + '">' + etiq + "</span>" : "") +
+    '<span class="dist" style="color:' + (dentro ? col : "var(--white)") + '">' +
+      (dentro ? "YA EN ZONA" : (pct > 0 ? "+" : "") + fmt(pct, 2) + " %") + "</span>" +
+    (dentro || !pts ? "" : '<span class="pts">' + pts + "</span>");
+
+  var pista = '<span class="via"></span>' +
+    '<span class="franja-banda" style="left:' + pos(z.desde) + "%;width:" +
+      (pos(z.hasta) - pos(z.desde)) + "%;background:rgba(" + rgb + ',.45)"></span>' +
     (isFinite(P) && P > 0 ? '<span class="franja-marca ahora" style="left:' + pos(P) + '%"></span>' : "") +
     (isFinite(z.invalida) ? '<span class="franja-marca muere" style="left:' + pos(z.invalida) + '%"></span>' : "");
 
   var eje =
-    '<b style="left:' + pos((z.desde + z.hasta) / 2) + '%;color:var(--amber)">' +
+    (isFinite(P) && P > 0 ? '<b style="left:' + pos(P) + '%;color:var(--white)">' + fmtEje(P) + "</b>" : "") +
+    '<b style="left:' + pos((z.desde + z.hasta) / 2) + "%;color:" + col + ';font-weight:700">' +
       fmtEje(z.desde) + "–" + fmtEje(z.hasta) + "</b>" +
-    (isFinite(P) && P > 0 && !dentro
-      ? '<b style="left:' + pos(P) + '%;color:var(--white)">' + fmtEje(P) + "</b>" : "") +
     (isFinite(z.invalida)
-      ? '<b style="left:' + pos(z.invalida) + '%;color:var(--red)">' + fmtEje(z.invalida) + "</b>" : "");
+      ? '<b style="left:' + pos(z.invalida) + '%;color:var(--orange)">' + fmtEje(z.invalida) + "</b>" : "");
 
-  var filas =
-    "<dt>vigilar</dt><dd style=\"color:var(--amber)\">" + fmtP(z.desde) + " – " + fmtP(z.hasta) +
-      (distanciaZona(P, z) ? ' <span style="color:' + (dentro ? "var(--green)" : "var(--dim2)") + '">· ' +
-        esc(distanciaZona(P, z)) + "</span>" : "") + "</dd>" +
-    (z.que ? '<dt>señal</dt><dd title="' + esc(z.que) + '">' + esc(recortaTexto(z.que, 120)) + "</dd>" : "") +
+  var fichas =
+    ficha(accion, fmtEje(z.desde) + "–" + fmtEje(z.hasta), col, "rgba(" + rgb + ",.12)") +
+    ficha("precio ahora", isFinite(P) && P > 0 ? fmtEje(P) : "—", "var(--white)", "") +
     (isFinite(z.invalida)
-      ? '<dt>muere si</dt><dd style="color:var(--red)">' + fmtP(z.invalida) + "</dd>" : "") +
-    (z.propia ? "" : '<dt>origen</dt><dd style="color:var(--dim2)">deducida de los niveles, no del modelo</dd>');
+      ? ficha("muere si", fmtEje(z.invalida), "var(--orange)", "rgba(224,121,60,.10)")
+      : ficha("origen", z.propia ? "el modelo" : "los niveles", "var(--dim2)", ""));
 
-  return '<div class="franja"><div class="franja-pista">' + marcas + "</div>" +
+  return '<div class="franja" style="border-left-color:' + col + '">' +
+    '<div class="franja-cab">' + cab + "</div>" +
+    '<div class="franja-pista">' + pista + "</div>" +
     '<div class="franja-eje">' + eje + "</div>" +
-    '<dl class="franja-filas">' + filas + "</dl></div>";
+    '<div class="franja-fichas">' + fichas + "</div>" +
+    (z.que ? '<div class="franja-senal"><span class="k">señal</span>' +
+      '<span class="t" title="' + esc(z.que) + '">' + esc(recortaTexto(z.que, 120)) + "</span></div>" : "") +
+    "</div>";
+}
+
+function ficha(k, v, col, fondo){
+  return '<div class="franja-ficha"' + (fondo ? ' style="background:' + fondo + '"' : "") + ">" +
+    '<span class="k"' + (col && col !== "var(--white)" && col !== "var(--dim2)"
+      ? ' style="color:' + col + '"' : "") + ">" + esc(k) + "</span>" +
+    '<span class="v" style="color:' + col + '">' + v + "</span></div>";
+}
+
+/* La operación, en la misma cinta: el riesgo y el recorrido dibujados a
+   escala a los dos lados de la entrada. La tabla de cuatro filas daba los
+   números pero no la geometría, y es la geometría la que te dice de un
+   vistazo si el stop está pegado y los objetivos lejos, o al revés. */
+function pintarRuta(o){
+  var largo = o.dir === "long";
+  var col = largo ? "var(--green)" : "var(--red)";
+  var vals = [o.entrada, o.stop, o.tp1, o.tp2, o.tp3].filter(function(v){ return isFinite(v) && v > 0; });
+  if(vals.length < 3 || !isFinite(o.entrada) || !isFinite(o.stop)) return "";
+  var min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+  var margen = (max - min) * 0.08 || Math.max(max * 0.002, 1);
+  min -= margen; max += margen;
+  var pos = function(v){ return ((v - min) / (max - min)) * 100; };
+
+  var riesgo = Math.abs(o.entrada - o.stop);
+  var premio = Math.abs(o.tp1 - o.entrada);
+  var rr = riesgo > 0 ? premio / riesgo : NaN;
+  var lejano = isFinite(o.tp3) && o.tp3 > 0 ? o.tp3 : o.tp1;
+
+  var banda = function(a, b, color){
+    var i = Math.min(pos(a), pos(b));
+    return '<span class="franja-banda" style="left:' + i + "%;width:" +
+      (Math.max(pos(a), pos(b)) - i) + "%;background:" + color + '"></span>';
+  };
+
+  var pista = '<span class="via"></span>' +
+    banda(o.stop, o.entrada, "rgba(232,83,110,.28)") +
+    banda(o.entrada, lejano, "rgba(78,204,163,.28)") +
+    [o.tp1, o.tp2, o.tp3].map(function(t){
+      return isFinite(t) && t > 0
+        ? '<span class="franja-marca muere" style="left:' + pos(t) + '%;background:var(--green)"></span>' : "";
+    }).join("") +
+    '<span class="franja-marca muere" style="left:' + pos(o.stop) + '%;background:var(--red)"></span>' +
+    '<span class="franja-marca ahora" style="left:' + pos(o.entrada) + '%"></span>';
+
+  var eje =
+    '<b style="left:' + pos(o.stop) + '%;color:var(--red)">' + fmtEje(o.stop) + "</b>" +
+    '<b style="left:' + pos(o.entrada) + '%;color:var(--white);font-weight:700">' + fmtEje(o.entrada) + "</b>" +
+    (isFinite(o.tp3) && o.tp3 > 0
+      ? '<b style="left:' + pos(o.tp3) + '%;color:var(--green)">' + fmtEje(o.tp3) + "</b>" : "");
+
+  var cab =
+    '<span class="tit">' + (largo ? "Comprar" : "Vender") + "</span>" +
+    '<span class="dir" style="color:' + col + '">' + (largo ? "LARGO" : "CORTO") + "</span>" +
+    (isFinite(rr)
+      ? '<span class="dist" style="color:' + (rr >= 1.5 ? "var(--green)" : "var(--amber)") + '">R:R ' +
+        fmt(rr, 2) + "</span>" : "");
+
+  var fichas =
+    ficha("entrada", fmtEje(o.entrada), "var(--white)", "") +
+    ficha("stop", fmtEje(o.stop), "var(--red)", "rgba(232,83,110,.10)") +
+    ficha("objetivos", [o.tp1, o.tp2, o.tp3].filter(function(t){ return isFinite(t) && t > 0; })
+      .map(fmtEje).join(" · ") + (o.tp3prov ? " *" : ""), "var(--green)", "rgba(78,204,163,.10)");
+
+  return '<div class="franja" style="border-left-color:' + col + '">' +
+    '<div class="franja-cab">' + cab + "</div>" +
+    '<div class="franja-pista">' + pista + "</div>" +
+    '<div class="franja-eje">' + eje + "</div>" +
+    '<div class="franja-fichas">' + fichas + "</div></div>";
 }
 
 function pintarIA(){
@@ -2286,21 +2405,13 @@ function pintarIA(){
           (z ? '<div class="ia-dato" style="margin-top:8px"><span>dónde volver a mirar</span></div>' +
                pintarFranja(z, S.precio) : "") + "</div>";
       }
-      var filas = [
-        ["dirección", o.dir === "long" ? "largo" : "corto", col],
-        ["entrada", fmtP(o.entrada), "var(--white)"],
-        ["stop", fmtP(o.stop), "var(--red)"],
-        ["objetivos", fmtP(o.tp1) + " · " + fmtP(o.tp2) + " · " + fmtP(o.tp3) + (o.tp3prov ? " *" : ""), "var(--green)"]
-      ].map(function(f){
-        return '<div class="est-fila"><span>' + f[0] + '</span><span style="color:' + f[2] +
-               ';font-weight:700">' + f[1] + "</span></div>";
-      }).join("");
+      var ruta = pintarRuta(o);
       var activa = o.id && o.id === S.opId;
       return '<div class="ia-caja' + (activa ? " ia-activa" : "") + '"><div class="ia-cab">' +
         '<span class="ia-ver" style="color:' + col + '">' + esc(o.nombre) + "</span>" +
         (o.confianza ? '<span class="badge">confianza ' + esc(o.confianza) + "</span>" : "") + "</div>" +
         '<div class="ia-txt">' + esc(o.razon) + "</div>" +
-        '<div class="est-tabla">' + filas + "</div>" +
+        ruta +
         (o.disparador ? '<div class="ia-dato"><span>disparador</span>' + esc(o.disparador) + "</div>" : "") +
         (o.invalidacion ? '<div class="ia-dato"><span>invalidación</span>' + esc(o.invalidacion) + "</div>" : "") +
         (o.si_falla ? '<div class="ia-dato"><span>si falla</span>' + esc(o.si_falla) + "</div>" : "") +
@@ -2822,7 +2933,7 @@ function meterImagen(i, file){
     // huecos y con tres dejaba slotActivo apuntando fuera del array.
     slotActivo = Math.min(S.tfs.length - 1, i + 1);
     guardar();
-    renderTFs(); pintarVista();
+    renderTFs(); pintarVista(); pintarAjustes();
   });
 }
 var inputFile = document.createElement("input");
