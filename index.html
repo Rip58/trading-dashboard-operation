@@ -1840,8 +1840,12 @@ datosVivo() + "\n\n" +
 "En 'operacion' va una sola, la intradía. " +
 "En 'aviso' recoges sus avisos más cualquier pega que le veas tú a la operación.";
 
-  // temperature 0: con la misma lectura, las mismas cuentas.
-  return llamarIA([{role:"user", content:instruccion}], 4000, 0, MEDIADOR.id);
+  // 8000, el techo que admite el servidor, y no 4000: en Fable 5 el
+  // razonamiento está siempre activo y gasta del mismo presupuesto que la
+  // respuesta. Con 900 el JSON llegaba cortado a media llave. Pedir de más no
+  // cuesta nada —se paga lo generado— y evita que un caso difícil, con tres
+  // informes largos, se coma el cierre del JSON.
+  return llamarIA([{role:"user", content:instruccion}], 8000, 0, MEDIADOR.id);
 }
 
 /* El mediador: el modelo que compara los tres informes y firma la operación.
