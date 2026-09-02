@@ -709,9 +709,10 @@ var SIMBOLOS = ["BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT","DOGEUSDT","AD
   "AVAXUSDT","LINKUSDT","TRXUSDT","DOTUSDT","TONUSDT","SUIUSDT","PEPEUSDT","LTCUSDT",
   "SHIBUSDT","NEARUSDT","APTUSDT","UNIUSDT","ATOMUSDT"];
 
-var mercado = {};            // "BTC/USDT" -> {precio, cambio}
+var mercado = {};            // "BTC/USDT" -> {precio, cambio, max, min, vol}
 var mercadoEstado = "sin consultar";   // texto que se enseña bajo el activo
 var mercadoHost = null;                // host que respondió la última vez
+var mercadoSello = null;               // cuándo respondió, para saber si el precio está fresco
 
 /* Binance publica los mismos datos en varios hosts. Si uno está bloqueado
    —por la red, el operador o un bloqueador del navegador— los demás suelen
@@ -771,9 +772,20 @@ function pedirMercado(){
         if(!Array.isArray(datos)) throw new Error("respuesta inesperada");
         datos.forEach(function(d){
           var pr = parseFloat(d.lastPrice), cb = parseFloat(d.priceChangePercent);
-          if(isFinite(pr)) mercado[aPar(d.symbol)] = {precio:pr, cambio: isFinite(cb) ? cb : null};
+          var mx = parseFloat(d.highPrice), mn = parseFloat(d.lowPrice), vl = parseFloat(d.quoteVolume);
+          // El máximo y el mínimo de 24 h son la única referencia de volatilidad
+          // que viene de un dato real y no de leer píxeles: se guardan para
+          // dárselos a la IA cuando tenga que dimensionar stops.
+          if(isFinite(pr)) mercado[aPar(d.symbol)] = {
+            precio: pr,
+            cambio: isFinite(cb) ? cb : null,
+            max: isFinite(mx) ? mx : null,
+            min: isFinite(mn) ? mn : null,
+            vol: isFinite(vl) ? vl : null
+          };
         });
         var h = new Date();
+        mercadoSello = h;
         mercadoHost = host.replace(/^https:\/\//, "");
         mercadoEstado = mercadoHost + " · " +
           String(h.getHours()).padStart(2,"0") + ":" + String(h.getMinutes()).padStart(2,"0");
@@ -792,6 +804,51 @@ function precioDeMercado(){
   var m = mercado[S.activo];
   if(m && isFinite(m.precio)){ S.precio = m.precio; return true; }
   return false;
+}
+
+/* Los números que la IA NO tiene que deducir de los píxeles.
+   Leer un precio de un eje comprimido da un error de decenas de puntos; el
+   ticker de Binance da el dato exacto. Todo lo que se pueda pasar como número
+   deja de ser una estimación visual, que es de donde salían las diferencias
+   entre lecturas del mismo gráfico. */
+function datosVivo(){
+  var m = mercado[S.activo] || {};
+  var vivo = isFinite(m.precio) && Math.abs(m.precio - S.precio) < m.precio * 0.002;
+  var lineas = [];
+
+  lineas.push("Activo declarado: " + S.activo + ".");
+  lineas.push(vivo
+    ? "Precio ahora mismo: " + fmtP(S.precio) + " — dato del ticker de Binance (" +
+      (mercadoHost || "binance") + ", " + horaCorta(mercadoSello) + "), exacto. " +
+      "Las capturas pueden marcar otro precio porque son de hace unos minutos: manda este."
+    : "Precio ahora mismo: " + fmtP(S.precio) + " — escrito a mano, sin confirmar contra Binance. " +
+      "Trátalo como aproximado.");
+
+  if(isFinite(m.cambio)) lineas.push("Variación en 24 h: " + (m.cambio > 0 ? "+" : "") + fmt(m.cambio, 2) + " %.");
+
+  if(isFinite(m.max) && isFinite(m.min)){
+    var rango = m.max - m.min;
+    lineas.push(
+      "Rango real de las últimas 24 h: " + fmtP(m.min) + " – " + fmtP(m.max) +
+      " (" + fmt(rango, 0) + " puntos, " + fmt(rango / m.precio * 100, 2) + " %). " +
+      "Son datos de Binance, no lecturas del gráfico: úsalos para dimensionar. " +
+      "Un stop intradía razonable está en el entorno de " + fmt(rango / 6, 0) +
+      " a " + fmt(rango / 3, 0) + " puntos; uno de swing, entre " + fmt(rango / 2, 0) +
+      " y " + fmt(rango, 0) + " puntos. No son reglas, son la escala de volatilidad que hay hoy: " +
+      "si te sales mucho de ahí, justifícalo con la estructura."
+    );
+  }
+  if(isFinite(S.atr) && S.atr > 0)
+    lineas.push("Rango de vela fijado a mano en la app: " + fmtP(S.atr) + " puntos.");
+  if(isFinite(m.vol) && m.vol > 0)
+    lineas.push("Volumen negociado en 24 h: " + fmt(m.vol / 1e6, 0) + " millones de USDT.");
+
+  return lineas.join("\n");
+}
+
+function horaCorta(d){
+  if(!d) return "sin hora";
+  return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
 }
 
 /* ================= análisis con IA (Abacus RouteLLM) =================
@@ -850,13 +907,14 @@ function bloqueImagen(dataUrl){
   return {type:"image_url", image_url:{url:dataUrl}};
 }
 
-function llamarIA(mensajes, maxTokens){
+function llamarIA(mensajes, maxTokens, temperatura){
   return fetch(RUTA_IA, {
     method:"POST",
     headers: cabecerasIA(),
     body: JSON.stringify({
       model: S.ia.modelo || undefined,
       max_tokens: maxTokens || 3000,
+      temperature: isFinite(temperatura) ? temperatura : undefined,
       messages: mensajes
     })
   }).then(function(r){
@@ -1558,26 +1616,39 @@ function initArrastre(){
    que valore la operación resultante. Separarlo importa: el segundo paso
    necesita números que solo existen después del primero. */
 
-function pasoLeerGraficos(){
+/* El paso 1 va, a su vez, en dos llamadas:
+
+   1ª — VER. Las capturas, y nada de formato que cumplir. Un modelo al que se
+        le exige emitir JSON mientras mira una imagen empieza a rellenar campos
+        antes de terminar de mirar, y ahí es donde se inventa los precios que
+        no consigue leer. Sin esquema que rellenar puede decir "esto no se lee".
+   2ª — MONTAR. Sin imágenes, solo el texto de la anterior más los datos en
+        vivo de Binance, y temperature 0. La aritmética del R:R, el orden de
+        los objetivos y el lado del stop son cuentas, no criterio: conviene que
+        salgan iguales dos veces seguidas con la misma lectura.
+
+   Cuesta una llamada más de texto (barata: no lleva imágenes) y a cambio
+   separa "qué se ve" de "qué se hace con lo que se ve". */
+
+function bloquesCapturas(){
   var imgs = [], etiquetas = [];
   S.tfs.forEach(function(t){
     var b = bloqueImagen(t.img);
     if(b){ imgs.push(b); etiquetas.push(t.label); }
   });
-  if(imgs.length < 1) return Promise.reject(new Error("no hay capturas que analizar"));
+  return {imgs:imgs, etiquetas:etiquetas};
+}
 
-  /* El prompt hace tres cosas a la vez, y el orden importa: primero obliga a
-     leer de mayor a menor temporalidad (que es como se opera de verdad),
-     después exige que cada precio salga de algo visible, y solo al final pide
-     las dos operaciones. Y le da permiso explícito para no proponer ninguna:
-     un prompt que siempre devuelve un trade devuelve trades malos. */
+/* --- 1ª llamada: leer los gráficos, en prosa --- */
+function pasoVer(cap){
   var instruccion =
-"Eres un trader discrecional con quince años operando cripto, y hoy respondes como el gestor de riesgo de la mesa. " +
-"No eres un asistente complaciente: quedarte fuera es una decisión tan buena como entrar, y decir que no ves nada " +
-"es una respuesta profesional.\n\n" +
+"Eres un trader discrecional con quince años operando cripto. Ahora mismo solo estás mirando gráficos: " +
+"no propones operaciones todavía, no rellenas ningún formulario. Describe lo que ves.\n\n" +
 
-"Te paso " + imgs.length + " capturas del MISMO activo, de mayor a menor temporalidad: " + etiquetas.join(", ") + ".\n" +
-"Activo declarado: " + S.activo + ". Precio actual, dato en vivo y fiable: " + fmtP(S.precio) + ".\n\n" +
+"Te paso " + cap.imgs.length + " capturas del MISMO activo, de mayor a menor temporalidad: " +
+cap.etiquetas.join(", ") + ".\n\n" +
+
+datosVivo() + "\n\n" +
 
 "MÉTODO, en este orden:\n" +
 "1. Lee de arriba abajo. La temporalidad mayor manda: define el contexto y la dirección permitida. Las menores " +
@@ -1588,47 +1659,106 @@ function pasoLeerGraficos(){
 "retesteo, máximos y mínimos que hayan frenado el precio más de una vez. No inventes números redondos ni pintes " +
 "un soporte donde solo hay una vela.\n\n" +
 
-"DESPUÉS PROPÓN DOS OPERACIONES, independientes entre sí:\n" +
+"SOBRE LA PRECISIÓN, que es la parte importante:\n" +
+"El eje de precios de estas capturas suele estar comprimido y sin cursor, así que leer una mecha exacta es " +
+"imposible. No pasa nada: di el número y di el margen. 'Mínimo sobre 77.960, ±40' es una respuesta útil; " +
+"'77.963' es una respuesta falsa. Si una zona del gráfico no se lee —eje tapado, velas amontonadas, un hueco sin " +
+"estructura— escribe literalmente NO LEGIBLE y sigue. Nadie te va a penalizar por dejar huecos; inventarlos sí " +
+"estropea la operación que se monte después.\n\n" +
+
+"Responde en texto normal, sin JSON y sin tablas, con un apartado por temporalidad y este contenido en cada uno:\n" +
+"- la etiqueta de la temporalidad tal y como te la he dado\n" +
+"- sesgo, como número entero: -2 bajista fuerte, -1 bajista, 0 neutro, 1 alcista, 2 alcista fuerte\n" +
+"- estructura, en una o dos frases\n" +
+"- nota: lo que un operador tendría en cuenta y no se ve en la estructura (volumen, extensión, dónde está el " +
+"precio dentro del rango)\n" +
+"- niveles leídos en ese gráfico, cada uno con su precio, su margen de error y por qué es un nivel\n\n" +
+
+"Y al final, un apartado AVISOS con: si alguna imagen no es un gráfico, está cortada o no coincide con el activo " +
+"declarado; qué no has podido leer; y cualquier diferencia entre lo que marcan las capturas y el precio en vivo " +
+"que te he dado.";
+
+  var contenido = [];
+  cap.imgs.forEach(function(b, i){
+    contenido.push({type:"text", text:"Captura " + (i+1) + " — " + cap.etiquetas[i] + ":"});
+    contenido.push(b);
+  });
+  contenido.push({type:"text", text:instruccion});
+
+  return llamarIA([{role:"user", content:contenido}], 3000, 0.2).then(function(r){
+    var t = textoDe(r);
+    if(!t || t.length < 40) throw new Error("la lectura de los gráficos vino vacía");
+    return t;
+  });
+}
+
+/* --- 2ª llamada: montar las operaciones, sin imágenes y sin creatividad --- */
+function pasoMontar(lectura, cap){
+  var instruccion =
+"Eres el gestor de riesgo de una mesa de trading de cripto. No eres un asistente complaciente: quedarte fuera es " +
+"una decisión tan buena como entrar, y decir que no ves nada es una respuesta profesional.\n\n" +
+
+"Otro operador ha mirado " + cap.imgs.length + " capturas del mismo activo (" + cap.etiquetas.join(", ") +
+") y te pasa su lectura. Tú no ves los gráficos: trabajas con lo que te ha escrito y con los datos de mercado. " +
+"Si en su lectura pone NO LEGIBLE o un margen de error, respétalo — no afines un precio que él no pudo leer.\n\n" +
+
+datosVivo() + "\n\n" +
+
+"===== LECTURA DE LOS GRÁFICOS =====\n" + lectura + "\n===== FIN DE LA LECTURA =====\n\n" +
+
+"PROPÓN DOS OPERACIONES, independientes entre sí:\n" +
 "- Una INTRADÍA, para abrir y cerrar dentro de las próximas horas. El gatillo está en 15m o 1H.\n" +
 "- Una de SWING, para mantener entre 3 y 4 días. El gatillo está en 4H o 1D.\n\n" +
 
-"Pueden ir en direcciones opuestas si es lo que dicen los gráficos; no fuerces que coincidan. Y si una de las dos " +
-"no tiene sentido ahora mismo, pon operar en false y explica en una frase por qué: no hay ninguna obligación de " +
-"encontrar un trade.\n\n" +
+"Pueden ir en direcciones opuestas si es lo que dice la lectura; no fuerces que coincidan. Y si una de las dos " +
+"no tiene sentido ahora mismo, pon operar en false: no hay ninguna obligación de encontrar un trade.\n\n" +
 
 "Para cada operación que sí propongas:\n" +
 "- entrada, stop y tres objetivos, en precios concretos\n" +
-"- el stop va DETRÁS de una estructura visible, nunca a una distancia arbitraria ni en el número redondo donde se " +
-"acumulan los stops de todo el mundo\n" +
+"- el stop va DETRÁS de una estructura de la lectura, nunca a una distancia arbitraria ni en el número redondo " +
+"donde se acumulan los stops de todo el mundo. Contrasta su distancia con el rango de 24 h de arriba: un stop " +
+"mucho más estrecho que esa escala lo barre el ruido, y uno mucho más ancho no lo compensan los objetivos.\n" +
 "- el primer objetivo tiene que dar al menos 1,5 veces lo que se arriesga; si no llega, no propongas la operación\n" +
+"- tp1 y tp2 salen de niveles de la lectura. El tercero puede no tener nivel enfrente: si en la lectura no hay " +
+"nada por encima (en largo) o por debajo (en corto), proyéctalo desde el rango de 24 h y pon tp3_proyectado en " +
+"true. Un objetivo proyectado y declarado es honesto; un nivel inventado para rellenar el hueco, no.\n" +
 "- disparador: la condición que confirma la entrada, no el precio a secas (por ejemplo 'cierre de 1H por encima " +
 "de X con volumen', no 'entrar en X')\n" +
 "- invalidacion: qué verías que te diría que la idea está muerta, aparte de que salte el stop\n" +
 "- si_falla: qué harías si la operación se pierde, en una frase\n\n" +
 
 "REGLAS QUE NO SE SALTAN:\n" +
-"- Todo precio que escribas sale de algo visible en las capturas. Nada de rangos inventados.\n" +
-"- Si una imagen no es un gráfico, está cortada, o el activo no coincide con el declarado, dilo en 'aviso' y no " +
-"rellenes el hueco a base de suponer.\n" +
+"- Todo precio sale de la lectura o de los datos de mercado de arriba. Nada inventado. La única excepción es tp3, " +
+"y solo declarándolo.\n" +
+"- Si pones operar en false: direccion va en null, los cinco precios van en 0, y motivo_no explica en una frase " +
+"por qué no. No rellenes una operación que no vas a recomendar.\n" +
+"- Los objetivos van en orden: en largo tp1 < tp2 < tp3 y el stop por debajo de la entrada; en corto al revés.\n" +
 "- Nada de lenguaje de vendedor ni de optimismo por defecto. Si la situación es fea, dilo con esas palabras.\n\n" +
 
 "Responde SOLO con este JSON, sin texto alrededor:\n" +
 '{"activo":"","lectura":[{"temporalidad":"","sesgo":0,"estructura":"","nota":""}],' +
 '"niveles":[{"precio":0,"tf":""}],' +
 '"operaciones":[{"horizonte":"intradia","operar":true,"motivo_no":"","direccion":"largo",' +
-'"entrada":0,"stop":0,"tp1":0,"tp2":0,"tp3":0,"disparador":"","invalidacion":"","si_falla":"",' +
-'"confianza":"media","razon":""}],"aviso":""}\n\n' +
-"sesgo es un entero: -2 bajista fuerte, -1 bajista, 0 neutro, 1 alcista, 2 alcista fuerte. " +
-"En 'operaciones' van exactamente dos entradas, la primera con horizonte 'intradia' y la segunda 'swing'.";
+'"entrada":0,"stop":0,"tp1":0,"tp2":0,"tp3":0,"tp3_proyectado":false,' +
+'"disparador":"","invalidacion":"","si_falla":"","confianza":"media","razon":""}],"aviso":""}\n\n' +
+"En 'lectura' va una entrada por cada temporalidad de la lectura de arriba, con su sesgo entero de -2 a 2, " +
+"copiando lo que dijo el operador. En 'niveles' van los suyos, sin añadir ninguno. " +
+"En 'operaciones' van exactamente dos entradas, la primera con horizonte 'intradia' y la segunda 'swing'. " +
+"En 'aviso' recoges sus avisos más cualquier pega que le veas tú a la operación.";
 
-  var contenido = [];
-  imgs.forEach(function(b, i){
-    contenido.push({type:"text", text:"Captura " + (i+1) + " — " + etiquetas[i] + ":"});
-    contenido.push(b);
-  });
-  contenido.push({type:"text", text:instruccion});
+  // temperature 0: con la misma lectura, las mismas cuentas.
+  return llamarIA([{role:"user", content:instruccion}], 4000, 0);
+}
 
-  return llamarIA([{role:"user", content:contenido}], 4000).then(function(r){
+function pasoLeerGraficos(){
+  var cap = bloquesCapturas();
+  if(cap.imgs.length < 1) return Promise.reject(new Error("no hay capturas que analizar"));
+
+  return pasoVer(cap).then(function(lectura){
+    iaTrabajando = "gráficos leídos · montando las dos operaciones…";
+    pintarIA();
+    return pasoMontar(lectura, cap);
+  }).then(function(r){
     var d = jsonDe(textoDe(r));
 
     // --- lo que ha leído de cada gráfico ---
@@ -1670,6 +1800,7 @@ function pasoLeerGraficos(){
         razon: String(o.razon || ""),
         dir: /cort|short/i.test(String(o.direccion || "")) ? "short" : "long",
         entrada:+o.entrada, stop:+o.stop, tp1:+o.tp1, tp2:+o.tp2, tp3:+o.tp3,
+        tp3prov: o.tp3_proyectado === true,   // objetivo sin nivel enfrente, proyectado y declarado
         id: null
       };
       var precios = [ficha.entrada, ficha.stop, ficha.tp1, ficha.tp2, ficha.tp3];
@@ -1757,9 +1888,18 @@ function analizarConIA(){
   iaOcupada = true;
   iaError = null;
   S.ia.valoracion = null;
-  iaTrabajando = "leyendo los gráficos y montando las dos operaciones…";
+  iaTrabajando = "pidiendo el precio a Binance…";
   pintarIA();
-  pasoLeerGraficos()
+  // El precio en vivo entra en los dos prompts, así que se refresca justo
+  // antes: un ticker de hace media hora vale menos que leer el gráfico.
+  Promise.resolve(pedirMercado())
+    .then(function(){ precioDeMercado(); }, function(){ /* se sigue con lo que haya */ })
+    .then(function(){
+      renderActivo();
+      iaTrabajando = "leyendo las cuatro capturas…";
+      pintarIA();
+      return pasoLeerGraficos();
+    })
     .then(function(){
       iaOcupada = false; iaTrabajando = null;
       guardar(); pintarTodo();
@@ -1823,7 +1963,7 @@ function pintarIA(){
         ["dirección", o.dir === "long" ? "largo" : "corto", col],
         ["entrada", fmtP(o.entrada), "var(--white)"],
         ["stop", fmtP(o.stop), "var(--red)"],
-        ["objetivos", fmtP(o.tp1) + " · " + fmtP(o.tp2) + " · " + fmtP(o.tp3), "var(--green)"],
+        ["objetivos", fmtP(o.tp1) + " · " + fmtP(o.tp2) + " · " + fmtP(o.tp3) + (o.tp3prov ? " *" : ""), "var(--green)"],
         ["R:R al 1º", isFinite(rr) ? fmt(rr, 2) : "—", rr >= 1.5 ? "var(--green)" : "var(--amber)"]
       ].map(function(f){
         return '<div class="est-fila"><span>' + f[0] + '</span><span style="color:' + f[2] +
@@ -1843,6 +1983,9 @@ function pintarIA(){
           (activa ? "es la operación activa" : "ver en el mapa") + "</b>]</button>" : "") +
         "</div>";
     }).join("") + "</div>");
+    if(ops.some(function(o){ return o.operar && o.tp3prov; }))
+      partes.push('<div class="com" style="margin-top:6px">// * tercer objetivo proyectado: ' +
+        "no hay nivel enfrente en los gráficos</div>");
   }
 
   // --- segunda opinión sobre la operación activa ---

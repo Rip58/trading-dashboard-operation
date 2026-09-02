@@ -138,12 +138,45 @@ introduces, más el precio de Binance.
 
 Con la función desplegada hay dos botones, y hacen cosas distintas.
 
-**`analizar con IA`** manda las capturas y pide una lectura completa. El prompt
-obliga a leer de mayor a menor temporalidad —la alta define la dirección
-permitida, las bajas solo afinan la entrada—, a anotar la estructura de cada
-gráfico, y a marcar únicamente niveles donde el precio haya reaccionado de
-verdad. De ahí salen los sesgos, las notas y los niveles, que la app aplica y
-con los que recalcula la confluencia y las cuatro estrategias.
+**`analizar con IA`** hace tres cosas, en este orden.
+
+Primero **refresca el precio en Binance**, porque ese dato entra en los dos
+prompts que vienen después. Luego van dos llamadas separadas:
+
+1. **Ver.** Las cuatro capturas, y ningún formato que cumplir. Se le pide una
+   lectura en prosa: estructura de cada gráfico, sesgo, y los niveles con su
+   margen de error. Esto último importa más de lo que parece: el eje de precios
+   de una captura de TradingView está comprimido, así que una mecha se lee con
+   un error de decenas de puntos. El prompt pide el número *y* el margen, y
+   permite escribir `NO LEGIBLE` donde no se lee. Un modelo al que se le exige
+   rellenar un JSON mientras mira una imagen se inventa los precios que no
+   consigue leer; sin campos que rellenar, puede decir que no los ve.
+2. **Montar.** Sin imágenes, solo el texto de la anterior más los datos de
+   mercado, y `temperature: 0`. Aquí sale el JSON con los sesgos, los niveles y
+   las dos operaciones. El R:R, el orden de los objetivos y el lado del stop son
+   aritmética, no criterio: conviene que salgan iguales dos veces seguidas con
+   la misma lectura.
+
+La segunda llamada no lleva imágenes, así que cuesta una fracción de la primera.
+
+De ahí salen los sesgos, las notas y los niveles, que la app aplica y con los
+que recalcula la confluencia y las cuatro estrategias.
+
+### Los números que la IA no tiene que adivinar
+
+Todo lo que se pueda pasar como número deja de ser una estimación visual. Los
+dos prompts llevan, del ticker de Binance:
+
+- el **precio exacto** de ahora mismo, con el host y la hora, y la instrucción
+  de que manda sobre lo que marquen las capturas (que son de hace unos minutos);
+- la **variación de 24 h**;
+- el **máximo y el mínimo de 24 h**, que es la escala de volatilidad real del
+  día y sirve para dimensionar el stop sin deducirlo de los píxeles. El prompt
+  traduce ese rango a un orden de magnitud para el stop intradía y para el de
+  swing, y pide que cualquier stop muy fuera de esa escala venga justificado.
+
+Si Binance no responde, el prompt lo dice con esas palabras —precio escrito a
+mano, sin confirmar— en vez de presentarlo como un dato fiable.
 
 Y además propone **dos operaciones**: una intradía, con el gatillo en 15m o 1H,
 y otra de swing para 3 o 4 días, con el gatillo en 4H o 1D. Pueden ir en
@@ -154,8 +187,15 @@ normales, así que aparecen en el desplegable, se dibujan en el mapa y se
 dimensionan con el panel de riesgo como cualquier otra.
 
 El prompt le da permiso explícito para no proponer nada: si una de las dos no
-tiene sentido, devuelve `no operar` y el motivo. Un prompt que siempre encuentra
-un trade encuentra trades malos.
+tiene sentido, devuelve `no operar` y el motivo, con la dirección en `null` y
+los precios a cero. Un prompt que siempre encuentra un trade encuentra trades
+malos.
+
+Los dos primeros objetivos salen de niveles de la lectura. El tercero a veces no
+tiene nada enfrente —por encima del máximo no hay estructura que leer—, así que
+el prompt permite proyectarlo desde el rango de 24 h siempre que lo declare; en
+la tarjeta aparece con un asterisco. Un objetivo proyectado y dicho es honesto;
+un nivel inventado para rellenar el hueco, no.
 
 **`pedir opinión sobre la activa`** es la segunda llamada, aparte: coge la
 operación que tengas activa —venga de una estrategia, de la IA o montada a

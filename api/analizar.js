@@ -75,6 +75,12 @@ module.exports = async function handler(req, res) {
     max_tokens: Math.min(Number(cuerpo.max_tokens) || 3000, 8000),
   };
 
+  // La app manda temperature 0 en el paso que construye el JSON: ahí no
+  // queremos creatividad, queremos aritmética repetible. Se reenvía solo si
+  // viene un número válido, para no romper modelos que no lo acepten.
+  const temp = Number(cuerpo.temperature);
+  if (Number.isFinite(temp) && temp >= 0 && temp <= 2) peticion.temperature = temp;
+
   // Un análisis con cuatro imágenes puede tardar; se corta antes de que lo
   // haga la plataforma, para poder devolver un error legible.
   const corte = new AbortController();
