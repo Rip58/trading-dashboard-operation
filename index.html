@@ -160,14 +160,6 @@ button,input,select,textarea{font-family:var(--mono); font-size:12px}
   background:rgba(10,10,10,.72); border:1px solid var(--border); line-height:0}
 .zona:hover .lupa{border-color:var(--amber)}
 .tf-pie{padding:5px; display:flex; flex-direction:column; gap:5px}
-.sesgo-grupo{display:grid; grid-template-columns:repeat(5,1fr); gap:2px}
-@media (max-width:700px){ .sesgo-grupo{gap:1px} }
-.sesgo-btn{padding:5px 0; border-radius:2px; border:1px solid var(--border); background:var(--sunk); color:var(--dim); cursor:pointer; font-size:10px; font-weight:700; line-height:1; min-width:0; overflow:hidden}
-@media (max-width:700px){ .sesgo-btn{font-size:9px; padding:5px 0} }
-.sesgo-btn:hover{color:var(--fg)}
-.sesgo-btn.on[data-s="-2"],.sesgo-btn.on[data-s="-1"]{border-color:var(--red); color:var(--red); background:rgba(232,83,110,.12)}
-.sesgo-btn.on[data-s="0"]{border-color:var(--dim2); color:var(--dim2); background:rgba(140,140,140,.10)}
-.sesgo-btn.on[data-s="1"],.sesgo-btn.on[data-s="2"]{border-color:var(--green); color:var(--green); background:rgba(78,204,163,.12)}
 .tf-nota{width:100%; resize:vertical; min-height:44px; padding:5px 7px; border-radius:2px; border:1px solid var(--border); background:var(--sunk); color:var(--dim2); font-size:11px; outline:none; line-height:1.45}
 .tf-nota:focus{border-color:var(--amber); color:var(--fg)}
 .nota-activa{margin-top:8px}
@@ -309,8 +301,6 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
   .est-usar{padding:13px 0}
   .caja-btn{padding:11px 14px}
 }
-.sesgo-grupo.grande{gap:4px}
-.sesgo-grupo.grande .sesgo-btn{min-height:44px; font-size:13px}
 .tf-sesgo{display:block; text-align:center; font-size:13px; font-weight:700; line-height:1.5}
 .chk .marca{width:22px}
 
@@ -378,7 +368,7 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
   <section class="sec" id="sec-evidencia">
     <div class="sec-cab"><span class="tri" style="color:var(--violet)">▸</span><h2>evidencia</h2>
       <span class="der" id="cuenta-img">0/4 capturas</span></div>
-    <div class="com">// suelta, pega (ctrl+v) o haz clic en cada hueco — de mayor a menor temporalidad</div>
+    <div class="com">// suelta, pega (ctrl+v) o haz clic en cada hueco — de mayor a menor temporalidad, y luego analiza</div>
     <div class="cuerpo">
       <div class="rejilla-tf" id="rejilla-tf"></div>
       <div class="nota-activa" id="nota-activa"></div>
@@ -401,7 +391,7 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
   <section class="sec" id="sec-confluencia">
     <div class="sec-cab"><span class="tri" style="color:var(--amber)">▸</span><h2>confluencia</h2>
       <span class="der" id="conf-peso">pesos 40/30/20/10</span></div>
-    <div class="com">// cada temporalidad vota; la mayor pesa más</div>
+    <div class="com">// lo que se lee en cada gráfico, ponderado: la temporalidad mayor manda</div>
     <div class="cuerpo">
       <div class="conf-grid">
         <div>
@@ -1314,15 +1304,11 @@ function renderTFs(){
   // La nota no cabe dentro de una columna de 85px: va debajo, y es la de la
   // temporalidad seleccionada.
   var a = S.tfs[slotActivo];
-  var botones = SESGOS.map(function(o){
-    return '<button class="sesgo-btn' + (a.sesgo === o.v ? " on" : "") + '" data-s="' + o.v + '" data-i="' + slotActivo +
-           '" title="' + o.n + '" aria-label="' + esc(a.label) + ": " + o.n + '">' + o.c + "</button>";
-  }).join("");
   el("nota-activa").innerHTML =
-    '<div class="nota-cab"><span class="lbl" style="margin:0">sesgo y nota de ' + esc(a.label) + '</span>' +
+    '<div class="nota-cab"><span class="lbl" style="margin:0">lectura de ' + esc(a.label) + '</span>' +
+      '<span class="badge" style="color:' + colorSesgo(a.sesgo) + ';border-color:currentColor">' +
+        glifoSesgo(a.sesgo) + " " + esc(nombreSesgo(a.sesgo)) + "</span>" +
       '<span class="pista" style="font-size:10px;color:var(--dim)">// toca otra captura para cambiar de temporalidad</span></div>' +
-    '<div class="sesgo-grupo grande" role="group" aria-label="Sesgo de ' + esc(a.label) + '">' + botones + '</div>' +
-    '<div style="font-size:10px;color:' + colorSesgo(a.sesgo) + ';margin:4px 0 5px">' + esc(nombreSesgo(a.sesgo)) + '</div>' +
     '<textarea class="tf-nota" id="tf-nota" rows="2" placeholder="// qué ves en ' + esc(a.label) + '">' + esc(a.nota) + '</textarea>' +
     (a.img ? '<div class="fila" style="margin-top:5px"><button class="cmd" data-quitar="' + slotActivo + '">[<b>quitar la captura de ' + esc(a.label) + '</b>]</button></div>' : "");
 }
@@ -2391,11 +2377,6 @@ function conectar(){
     if(e.target.id === "tf-nota"){ S.tfs[slotActivo].nota = e.target.value; guardar(); pintarPlan(); }
   });
   el("nota-activa").addEventListener("click", function(e){
-    var sb = e.target.closest(".sesgo-btn");
-    if(sb){
-      S.tfs[+sb.getAttribute("data-i")].sesgo = +sb.getAttribute("data-s");
-      guardar(); pintarTodo(); return;
-    }
     var q = e.target.closest("[data-quitar]");
     if(q){ S.tfs[+q.getAttribute("data-quitar")].img = null; guardar(); renderTFs(); }
   });

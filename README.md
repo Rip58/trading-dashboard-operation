@@ -22,9 +22,14 @@ que quieras). Las capturas se cargan por clic, arrastre o `ctrl+v`, con lupa
 para verlas a tamaño completo. Se reescalan antes de guardarse en el navegador,
 y si no caben la página lo dice en vez de fallar en silencio.
 
-**Confluencia.** Cada temporalidad vota en una escala de cinco
-(`↓↓ ↓ = ↑ ↑↑`) y pesa según su altura: 40/30/20/10. De ahí sale un veredicto
-de largo, corto o sin sesgo, con el desglose de lo que aporta cada una.
+**Confluencia.** Cada temporalidad aporta un sesgo, ponderado según su altura:
+40/30/20/10. De ahí sale un veredicto de largo, corto o sin sesgo, con el
+desglose de lo que aporta cada una.
+
+Ese sesgo lo pone la IA al analizar las capturas; no se marca a mano. Sin
+servidor de IA se queda en neutro, y con él la confluencia y las cuatro
+estrategias quedan sin dirección: el resto de la app —niveles, mapa, riesgo,
+checklist y plan— sigue funcionando.
 
 **Plegado.** Niveles y Mapa de operación se abren y cierran desde el triángulo
 de su cabecera, y recuerdan cómo los dejaste. Niveles llega plegada: se
@@ -194,9 +199,10 @@ objetivos táctiles por encima de 32 px de alto, los seis destinos del pie
 alcanzables sin scroll, y los tiradores del mapa arrastrables con el dedo sin
 que el mapa secuestre el desplazamiento de la página.
 
-Dos controles viven fuera de su tarjeta porque en una columna de 85 px no
-serían tocables: el sesgo y la nota de la temporalidad seleccionada están bajo
-la tira de capturas, y se cambia de temporalidad tocando otra captura.
+La nota de la temporalidad seleccionada vive bajo la tira de capturas, porque
+en una columna de 85 px no habría dónde escribir; se cambia de temporalidad
+tocando otra captura. En cada miniatura, el glifo de color indica el sesgo que
+leyó la IA.
 
 ## Estado
 
