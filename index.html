@@ -619,6 +619,25 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
 
 /* ================= utilidades ================= */
 var LS = "terminal-confluencia-v1";
+
+/* Un análisis guardado caduca por dos motivos, y los dos importan.
+
+   Por VERSIÓN: el de una app anterior describe operaciones que ya no existen
+   —el aviso seguía hablando de swing días después de quitarlo—. Sube este
+   número cuando cambie el formato del análisis.
+
+   Por HORA: cuatro horas es una vela de 4H, el peldaño de contexto de la
+   escalera. Pasada esa vela, la lectura describe un mercado que ya no está
+   ahí; y un texto viejo en pantalla, con su precio y su dirección, aparenta
+   ser de ahora mismo. Eso es peor que no tener nada. */
+var VERSION_ANALISIS = 2;
+var CADUCIDAD_MS = 4 * 60 * 60 * 1000;
+
+function analisisVigente(d){
+  if(+d.version !== VERSION_ANALISIS) return false;
+  var t = d.ia && d.ia.cuando ? Date.parse(d.ia.cuando) : NaN;
+  return isFinite(t) && (Date.now() - t) < CADUCIDAD_MS;
+}
 var nf = new Intl.NumberFormat("es-ES", {maximumFractionDigits:2});
 var nf0 = new Intl.NumberFormat("es-ES", {maximumFractionDigits:0});
 function fmt(n, d){
@@ -955,6 +974,7 @@ function estadoBase(){
     ops: [],
     opId: null,
     atr: null,                     // null = estimado a partir de los niveles
+    version: VERSION_ANALISIS,
     riesgo: {capital:5000, pct:1, apal:5},
     check: {},
     verTodos: false,
@@ -964,6 +984,7 @@ function estadoBase(){
 }
 var S = estadoBase();
 var vista = "inicio";     // "inicio" = solo cabecera y capturas · "analisis" = todo desplegado
+var analisisCaducado = false;   // había uno guardado, pero ya no valía: se descartó al cargar
 var noSePuedeGuardar = false;
 var slotActivo = 0;
 
@@ -991,6 +1012,10 @@ function cargar(){
     var d = JSON.parse(raw);
     if(!d || typeof d !== "object") return;
     var base = estadoBase();
+    // Las capturas se conservan siempre: son tuyas y son la evidencia. Lo que
+    // caduca es lo que la IA dedujo de ellas.
+    var vigente = analisisVigente(d);
+    analisisCaducado = !vigente && Boolean(d.ia && d.ia.cuando);
     S.activo  = typeof d.activo === "string" ? d.activo : base.activo;
     S.precio  = isFinite(d.precio) ? d.precio : base.precio;
     if(isFinite(d.atr) && d.atr > 0) S.atr = +d.atr;
@@ -1001,15 +1026,16 @@ function cargar(){
       var o = null;
       for(var k = 0; k < d.tfs.length; k++) if(d.tfs[k] && d.tfs[k].id === t.id) o = d.tfs[k];
       if(!o) return;
-      t.sesgo = clamp(Math.round(o.sesgo||0), -2, 2);
-      t.nota = typeof o.nota === "string" ? o.nota : t.nota;
       t.img = typeof o.img === "string" ? o.img : null;
       t.activo = typeof o.activo === "string" ? o.activo : null;
+      if(!vigente) return;              // el sesgo y la nota los escribió la IA
+      t.sesgo = clamp(Math.round(o.sesgo||0), -2, 2);
+      t.nota = typeof o.nota === "string" ? o.nota : t.nota;
     });
-    if(Array.isArray(d.niveles)) S.niveles = d.niveles
+    if(vigente && Array.isArray(d.niveles)) S.niveles = d.niveles
       .filter(function(l){ return l && isFinite(l.p); })
       .map(function(l){ return {p:+l.p, tf:String(l.tf||"")}; });   // el tipo y la etiqueta ya no se guardan
-    if(Array.isArray(d.ops) && d.ops.length){
+    if(vigente && Array.isArray(d.ops) && d.ops.length){
       S.ops = d.ops.filter(function(o){ return o && o.id && isFinite(o.entrada); })
         .map(function(o){
           return {
@@ -1030,18 +1056,21 @@ function cargar(){
       if(isFinite(d.riesgo.pct))     S.riesgo.pct = +d.riesgo.pct;
       if(isFinite(d.riesgo.apal))    S.riesgo.apal = +d.riesgo.apal;
     }
-    if(d.check && typeof d.check === "object") S.check = d.check;
+    if(vigente && d.check && typeof d.check === "object") S.check = d.check;
     if(d.plegado && typeof d.plegado === "object"){
       S.plegado.niveles = !!d.plegado.niveles;
       S.plegado.mapa = !!d.plegado.mapa;
       if(typeof d.plegado.ajustes === "boolean") S.plegado.ajustes = d.plegado.ajustes;
     }
     if(d.ia && typeof d.ia === "object"){
+      // El modelo es un ajuste, no un análisis: ese sí sobrevive.
       if(typeof d.ia.modelo === "string" && d.ia.modelo) S.ia.modelo = d.ia.modelo;
-      S.ia.resumen = d.ia.resumen || null;
-      S.ia.operaciones = Array.isArray(d.ia.operaciones) ? d.ia.operaciones : [];
-      S.ia.valoracion = d.ia.valoracion || null;
-      S.ia.cuando = d.ia.cuando || null;
+      if(vigente){
+        S.ia.resumen = d.ia.resumen || null;
+        S.ia.operaciones = Array.isArray(d.ia.operaciones) ? d.ia.operaciones : [];
+        S.ia.valoracion = d.ia.valoracion || null;
+        S.ia.cuando = d.ia.cuando || null;
+      }
     }
   }catch(e){ /* estado corrupto: se queda el de fábrica */ }
 }
@@ -1853,6 +1882,7 @@ function pasoLeerGraficos(){
       uso: r.usage || null
     };
     S.ia.cuando = new Date().toISOString();
+    analisisCaducado = false;
     return d;
   });
 }
@@ -2443,7 +2473,10 @@ function pintarVista(){
   el("btn-ultimo").hidden = !(vista === "inicio" && S.ia.cuando);
   el("btn-ultimo").innerHTML = "[<b>ver el último análisis IA</b>]";
   el("eco-sup").textContent = vista === "inicio"
-    ? (conCapturas ? "// tienes un análisis guardado" : "// añade las tres capturas para empezar")
+    ? (analisisCaducado ? "// el análisis anterior ha caducado: vuelve a analizar"
+       : S.ia.cuando ? "// tienes un análisis guardado"
+       : conCapturas ? "// " + conCapturas + "/" + S.tfs.length + " capturas · listo para analizar"
+       : "// añade las tres capturas para empezar")
     : "// " + S.activo + " · " + conCapturas + "/" + S.tfs.length + " capturas";
   el("pie").hidden = vista !== "analisis";
 }
