@@ -921,7 +921,7 @@ function bloqueImagen(dataUrl){
    cortado es el navegador. */
 var CORTE_IA_MS = 70000;
 
-function llamarIA(mensajes, maxTokens, temperatura){
+function llamarIA(mensajes, maxTokens, temperatura, modelo){
   var ctl = typeof AbortController !== "undefined" ? new AbortController() : null;
   var alarma = ctl ? setTimeout(function(){ ctl.abort(); }, CORTE_IA_MS) : null;
   var suelta = function(){ if(alarma) clearTimeout(alarma); };
@@ -931,7 +931,7 @@ function llamarIA(mensajes, maxTokens, temperatura){
     headers: cabecerasIA(),
     signal: ctl ? ctl.signal : undefined,
     body: JSON.stringify({
-      model: S.ia.modelo || undefined,
+      model: modelo || S.ia.modelo || undefined,
       max_tokens: maxTokens || 3000,
       temperature: isFinite(temperatura) ? temperatura : undefined,
       messages: mensajes
@@ -1413,6 +1413,10 @@ function renderTFs(){
 
   // La nota no cabe dentro de una columna de 85px: va debajo, y es la de la
   // temporalidad seleccionada.
+  // Saneado antes de usarlo: con un índice fuera de rango, esta función
+  // reventaba a la mitad y dejaba el contador y el botón congelados en el
+  // estado anterior, sin ninguna pista de por qué.
+  if(!S.tfs[slotActivo]) slotActivo = 0;
   var a = S.tfs[slotActivo];
   el("nota-activa").innerHTML = S.ia.cuando
     ? '<div class="nota-cab"><span class="lbl" style="margin:0">lectura IA de ' + esc(a.label) + '</span>' +
@@ -1705,7 +1709,7 @@ function bloquesCapturas(){
 }
 
 /* --- 1ª llamada: leer los gráficos, en prosa --- */
-function pasoVer(cap){
+function pasoVer(cap, modelo){
   var instruccion =
 "Eres un trader discrecional con quince años operando cripto. Ahora mismo solo estás mirando gráficos: " +
 "no propones operaciones todavía, no rellenas ningún formulario. Describe lo que ves.\n\n" +
@@ -1756,7 +1760,7 @@ datosVivo() + "\n\n" +
   });
   contenido.push({type:"text", text:instruccion});
 
-  return llamarIA([{role:"user", content:contenido}], 3000, 0.2).then(function(r){
+  return llamarIA([{role:"user", content:contenido}], 3000, 0.2, modelo).then(function(r){
     var t = textoDe(r);
     if(!t || t.length < 40) throw new Error("la lectura de los gráficos vino vacía");
     return t;
@@ -1779,13 +1783,15 @@ function pasoMontar(lectura, cap){
 "Eres el gestor de riesgo de una mesa de trading de cripto. No eres un asistente complaciente: quedarte fuera es " +
 "una decisión tan buena como entrar, y decir que no ves nada es una respuesta profesional.\n\n" +
 
-"Otro operador ha mirado " + cap.imgs.length + " capturas del mismo activo (" + cap.etiquetas.join(", ") +
-") y te pasa su lectura. Tú no ves los gráficos: trabajas con lo que te ha escrito y con los datos de mercado. " +
-"Si en su lectura pone NO LEGIBLE o un margen de error, respétalo — no afines un precio que él no pudo leer.\n\n" +
+"Tres analistas independientes han mirado " + cap.imgs.length + " capturas del mismo activo (" + cap.etiquetas.join(", ") +
+"). Tú eres el mediador final. No ves los gráficos: comparas sus informes con los datos de mercado. " +
+"Da más peso a evidencias coincidentes que a una mayoría sin justificación. Si discrepan en dirección o niveles " +
+"críticos, reduce la confianza o decide no operar. Nunca promedies precios incompatibles. Si un informe pone " +
+"NO LEGIBLE o da un margen de error, respétalo.\n\n" +
 
 datosVivo() + "\n\n" +
 
-"===== LECTURA DE LOS GRÁFICOS =====\n" + lectura + "\n===== FIN DE LA LECTURA =====\n\n" +
+"===== INFORMES INDEPENDIENTES =====\n" + lectura + "\n===== FIN DE LOS INFORMES =====\n\n" +
 
 "PROPÓN UNA SOLA OPERACIÓN, INTRADÍA: se abre y se cierra dentro de las próximas horas. Se decide con la " +
 "escalera 4H → 1H → 15m y solo con ella: 4H manda y fija la dirección permitida, 1H da la zona donde esperar, " +
@@ -1835,18 +1841,45 @@ datosVivo() + "\n\n" +
 "En 'aviso' recoges sus avisos más cualquier pega que le veas tú a la operación.";
 
   // temperature 0: con la misma lectura, las mismas cuentas.
-  return llamarIA([{role:"user", content:instruccion}], 4000, 0);
+  return llamarIA([{role:"user", content:instruccion}], 4000, 0, "deepseek-v4-pro");
 }
 
 function pasoLeerGraficos(){
   var cap = bloquesCapturas();
   if(cap.imgs.length < S.tfs.length) return Promise.reject(new Error("faltan capturas: la IA necesita las tres"));
 
-  return pasoVer(cap).then(function(lectura){
-    iaLecturasPrevias = separarLecturas(lectura, cap.imgs.length);
-    iaTrabajando = "gráficos leídos · montando la operación…";
+  var modelos = [
+    {id:"claude-sonnet-4-6", nombre:"Claude Sonnet 4.6"},
+    {id:"gpt-5.4", nombre:"GPT-5.4"},
+    {id:"gemini-3.1-pro", nombre:"Gemini 3.1 Pro"}
+  ];
+  iaAnalistas = modelos.map(function(m){
+    return {id:m.id, nombre:m.nombre, estado:"pendiente", texto:"", error:""};
+  });
+  iaTrabajando = "tres modelos están leyendo los gráficos en paralelo…";
+  pintarIA();
+
+  return Promise.all(modelos.map(function(m, i){
+    return pasoVer(cap, m.id).then(function(texto){
+      iaAnalistas[i].estado = "completo";
+      iaAnalistas[i].texto = texto;
+      pintarIA();
+      return {modelo:m, texto:texto};
+    }).catch(function(e){
+      iaAnalistas[i].estado = "error";
+      iaAnalistas[i].error = (e && e.message) || "sin respuesta";
+      pintarIA();
+      return null;
+    });
+  })).then(function(resultados){
+    var validos = resultados.filter(Boolean);
+    if(validos.length < 2) throw new Error("no respondieron al menos dos analistas");
+    var dossier = validos.map(function(r){
+      return "===== " + r.modelo.nombre + " (" + r.modelo.id + ") =====\n" + r.texto;
+    }).join("\n\n");
+    iaTrabajando = "DeepSeek V4 Pro está comparando los " + validos.length + " informes…";
     pintarIA();
-    return pasoMontar(lectura, cap);
+    return pasoMontar(dossier, cap);
   }).then(function(r){
     var d = jsonDe(textoDe(r));
 
@@ -1860,6 +1893,7 @@ function pasoLeerGraficos(){
         if(nota) S.tfs[i].nota = nota;
         if(t.temporalidad) S.tfs[i].label = String(t.temporalidad).slice(0, 4);
       });
+      iaLecturasPrevias = S.tfs.map(function(t){ return t.nota || ""; });
     }
 
     // --- niveles ---
@@ -1921,6 +1955,8 @@ function pasoLeerGraficos(){
       activo: d.activo ? String(d.activo) : null,
       aviso: d.aviso ? String(d.aviso) : null,
       modelo: (r && r.model) || null,
+      mediador: "deepseek-v4-pro",
+      analistas: iaAnalistas.map(function(a){ return {modelo:a.id, estado:a.estado}; }),
       uso: r.usage || null
     };
     S.ia.cuando = new Date().toISOString();
@@ -1972,15 +2008,29 @@ var iaOcupada = false;
 var iaTrabajando = null;    // texto del paso en curso
 var iaError = null;         // último fallo, hasta el siguiente intento
 var iaLecturasPrevias = []; // lectura visual separada antes de montar las operativas
+var iaAnalistas = [];       // respuestas independientes de Claude, GPT y Gemini
 
 function pintarPreanalisis(){
   var panel = el("ia-preanalisis");
-  var visible = iaOcupada || iaLecturasPrevias.length || S.ia.cuando;
+  var visible = iaOcupada || iaAnalistas.length || iaLecturasPrevias.length || S.ia.cuando;
   panel.hidden = !visible;
   if(!visible){ panel.innerHTML = ""; return; }
 
-  var leyendo = iaOcupada && !iaLecturasPrevias.length;
-  var sintetizando = iaOcupada && iaLecturasPrevias.length;
+  var pendientes = iaAnalistas.filter(function(a){ return a.estado === "pendiente"; }).length;
+  var leyendo = iaOcupada && pendientes > 0;
+  var sintetizando = iaOcupada && iaAnalistas.length > 0 && pendientes === 0;
+  var panelModelos = iaAnalistas.length ? '<div class="ia-rejilla" style="margin-bottom:9px">' +
+    iaAnalistas.map(function(a){
+      var estado = a.estado === "pendiente"
+        ? '<span class="girando" style="color:var(--amber)">▚</span> leyendo imágenes…'
+        : a.estado === "error"
+          ? '<span style="color:var(--red)">× ' + esc(a.error) + "</span>"
+          : '<span style="color:var(--green)">✓ análisis recibido</span>';
+      return '<div class="ia-caja"><div class="ia-cab"><span class="ia-ver">' + esc(a.nombre) +
+        '</span><span class="badge">analista</span></div><div class="ia-txt">' + estado + "</div>" +
+        (a.texto ? '<details><summary class="cmd">ver informe completo</summary><div class="ia-lectura-txt" style="margin-top:8px">' +
+          esc(a.texto) + "</div></details>" : "") + "</div>";
+    }).join("") + "</div>" : "";
   var tarjetas = S.tfs.map(function(t, i){
     var lectura = iaLecturasPrevias[i] || (S.ia.cuando ? t.nota : "");
     var cuerpo = lectura
@@ -2002,9 +2052,10 @@ function pintarPreanalisis(){
         '<div class="ia-esqueleto"></div><div class="ia-esqueleto"></div><div class="ia-esqueleto"></div></div></div>'
     : "";
 
-  panel.innerHTML = '<div class="ia-flujo-cab"><span class="ia-ver" style="color:var(--white)">lectura por captura</span>' +
-    '<span class="ia-etapa ' + (leyendo ? "on" : "") + '">01 leer · <span class="' + (sintetizando ? "on" : "") +
-    '">02 sintetizar</span></span></div><div class="ia-lecturas">' + tarjetas +
+  panel.innerHTML = '<div class="ia-flujo-cab"><span class="ia-ver" style="color:var(--white)">consenso multimodelo</span>' +
+    '<span class="ia-etapa ' + (leyendo ? "on" : "") + '">01 comparar · <span class="' + (sintetizando ? "on" : "") +
+    '">02 mediar con DeepSeek</span></span></div>' + panelModelos +
+    '<div class="ia-flujo-cab"><span class="ia-ver">lectura final por captura</span></div><div class="ia-lecturas">' + tarjetas +
     '</div><div class="ia-sintesis">' + estadoSintesis + "</div>" + previaSintesis;
 }
 
@@ -2671,7 +2722,9 @@ function meterImagen(i, file){
     S.ia.operaciones = [];
     iaLecturasPrevias = [];
     vista = "inicio";
-    slotActivo = Math.min(3, i + 1);
+    // El último índice, no un 3 fijo: ese 3 venía de cuando había cuatro
+    // huecos y con tres dejaba slotActivo apuntando fuera del array.
+    slotActivo = Math.min(S.tfs.length - 1, i + 1);
     guardar();
     renderTFs(); pintarVista();
   });

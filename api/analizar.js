@@ -23,6 +23,17 @@ function urlAbacus(){
   return process.env.ABACUS_URL || "https://routellm.abacus.ai/v1/chat/completions";
 }
 const LIMITE_CUERPO = 12 * 1024 * 1024;   // cuatro capturas en base64 caben de sobra
+const MODELOS_PERMITIDOS = new Set([
+  "route-llm",
+  "claude-sonnet-4-6",
+  "gpt-5.4",
+  "gemini-3.1-pro",
+  "deepseek-v4-pro",
+]);
+
+function modeloPermitido(modelo) {
+  return MODELOS_PERMITIDOS.has(modelo) || modelo === process.env.ABACUS_MODELO;
+}
 
 module.exports = async function handler(req, res) {
   res.setHeader("cache-control", "no-store");
@@ -69,8 +80,13 @@ module.exports = async function handler(req, res) {
     return res.status(413).json({ error: "la petición pesa demasiado: reduce las capturas" });
   }
 
+  const modelo = cuerpo.model || process.env.ABACUS_MODELO || "route-llm";
+  if (!modeloPermitido(modelo)) {
+    return res.status(400).json({ error: "modelo no permitido por esta aplicación" });
+  }
+
   const peticion = {
-    model: cuerpo.model || process.env.ABACUS_MODELO || "route-llm",
+    model: modelo,
     messages: cuerpo.messages,
     max_tokens: Math.min(Number(cuerpo.max_tokens) || 3000, 8000),
   };
