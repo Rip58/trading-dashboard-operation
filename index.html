@@ -331,7 +331,7 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
     <span style="color:var(--green)">rip</span><span style="color:var(--blue)">@dashboard</span><span style="color:var(--dim)">:~</span><span style="color:var(--green)">$</span>
     <span style="color:var(--white);font-weight:700">trading operation</span><span class="v6-cursor"></span>
   </div>
-  <div style="font-size:11px;color:var(--dim);margin-top:3px">// cuatro capturas, un sesgo ponderado y el trade que sale de ahí — precio en vivo desde Binance</div>
+  <div style="font-size:11px;color:var(--dim);margin-top:3px">// cuatro capturas → lectura de IA → una operativa intradía y otra swing</div>
 
   <div class="barra-sup">
     <button class="caja-btn" id="btn-nuevo">nuevo análisis</button>
@@ -383,8 +383,7 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
     </div>
   </section>
 
-  <!-- Todo lo que sigue vive plegado hasta que hay capturas: al abrir la app
-       solo se ve la cabecera y los cuatro huecos. -->
+  <!-- Los resultados solo aparecen después de una respuesta válida de la IA. -->
   <div id="analisis" hidden>
 
   <!-- ============ 2. CONFLUENCIA ============ -->
@@ -429,15 +428,15 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
     </div>
   </section>
 
-  <!-- ============ 4. ESTRATEGIAS ============ -->
+  <!-- ============ 4. OPERATIVAS DE IA ============ -->
   <section class="sec" id="sec-estrategias">
-    <div class="sec-cab"><span class="tri" style="color:var(--violet)">▸</span><h2>estrategias</h2>
-      <span class="der" id="est-regimen">—</span></div>
-    <div class="com">// cuatro formas de leer los mismos niveles — cada una guarda su operación con la hora</div>
+    <div class="sec-cab"><span class="tri" style="color:var(--violet)">▸</span><h2>operativas de IA</h2>
+      <span class="der" id="est-regimen" hidden>—</span></div>
+    <div class="com">// dos lecturas del mismo análisis: operativa 1 intradía y operativa 2 swing</div>
     <div class="cuerpo">
-      <div class="rejilla-est" id="rejilla-est"></div>
+      <div class="rejilla-est" id="rejilla-est" hidden></div>
       <div id="ia-valoracion"></div>
-      <div class="fila" style="margin-top:8px">
+      <div class="fila" style="margin-top:8px" hidden>
         <button class="cmd" id="btn-opinion">[<b>pedir opinión sobre la activa</b>]</button>
         <span style="color:var(--dim)">·</span>
         <button class="cmd" id="btn-calc-todas">[<b>calcular las cuatro</b>]</button>
@@ -448,7 +447,7 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
   </section>
 
   <!-- ============ 4. MAPA ============ -->
-  <section class="sec" id="sec-mapa">
+  <section class="sec" id="sec-mapa" hidden>
     <div class="sec-cab">
       <h2 class="sec-tit"><button type="button" class="plegar" data-plegar="mapa" aria-expanded="true"
         aria-controls="cuerpo-mapa"><span class="tri" style="color:var(--green)">▾</span>mapa de operación</button></h2>
@@ -504,7 +503,7 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
   </section>
 
   <!-- ============ 5. RIESGO ============ -->
-  <section class="sec" id="sec-riesgo">
+  <section class="sec" id="sec-riesgo" hidden>
     <div class="sec-cab"><span class="tri" style="color:var(--orange)">▸</span><h2>riesgo</h2>
       <span class="der" id="riesgo-der">—</span></div>
     <div class="com">// el stop decide el tamaño, nunca al revés</div>
@@ -529,20 +528,19 @@ pre.plan{margin:0; padding:10px 12px; border:1px solid var(--border); border-rad
 
   <!-- ============ 6. VALIDACIÓN ============ -->
   <section class="sec" id="sec-validacion">
-    <div class="sec-cab"><span class="tri" style="color:var(--red)">▸</span><h2>validación</h2>
+    <div class="sec-cab" hidden><span class="tri" style="color:var(--amber)">▸</span><h2>validación IA</h2>
       <span class="der" id="chk-score">—</span></div>
-    <div class="com">// lo que se marca solo sale de los datos de arriba; lo demás lo marcas tú</div>
     <div class="cuerpo">
-      <div id="chk-lista"></div>
-      <div style="margin-top:10px">
+      <div id="chk-lista" hidden></div>
+      <div>
         <div class="medidor"><span class="relleno" id="chk-relleno" style="left:0"></span></div>
-        <div id="chk-veredicto" style="margin-top:8px"></div>
+        <div id="chk-veredicto" hidden></div>
       </div>
     </div>
   </section>
 
   <!-- ============ 7. PLAN ============ -->
-  <section class="sec" id="sec-plan">
+  <section class="sec" id="sec-plan" hidden>
     <div class="sec-cab"><span class="tri" style="color:var(--white)">▸</span><h2>plan</h2>
       <span class="der" id="plan-sello">—</span></div>
     <div class="com">// para pegar en el diario antes de mandar la orden</div>
@@ -1353,8 +1351,10 @@ function renderTFs(){
           : '<span class="vacia"><span style="font-size:18px;color:var(--dim)">+</span>' +
             '<span style="font-size:10px;line-height:1.4">añadir<br>' + esc(t.label) + '</span></span>') +
       '</button>' +
-      '<div class="tf-pie"><span class="tf-sesgo" style="color:' + colorSesgo(t.sesgo) + '" title="' +
-        esc(nombreSesgo(t.sesgo)) + '">' + glifoSesgo(t.sesgo) + "</span></div>";
+      (S.ia.cuando
+        ? '<div class="tf-pie"><span class="tf-sesgo" style="color:' + colorSesgo(t.sesgo) + '" title="' +
+          esc(nombreSesgo(t.sesgo)) + '">' + glifoSesgo(t.sesgo) + "</span></div>"
+        : '');
     cont.appendChild(card);
   });
   el("cuenta-img").textContent = n + "/4 capturas";
@@ -1362,13 +1362,15 @@ function renderTFs(){
   // La nota no cabe dentro de una columna de 85px: va debajo, y es la de la
   // temporalidad seleccionada.
   var a = S.tfs[slotActivo];
-  el("nota-activa").innerHTML =
-    '<div class="nota-cab"><span class="lbl" style="margin:0">lectura de ' + esc(a.label) + '</span>' +
-      '<span class="badge" style="color:' + colorSesgo(a.sesgo) + ';border-color:currentColor">' +
-        glifoSesgo(a.sesgo) + " " + esc(nombreSesgo(a.sesgo)) + "</span>" +
-      '<span class="pista" style="font-size:10px;color:var(--dim)">// toca otra captura para cambiar de temporalidad</span></div>' +
-    '<textarea class="tf-nota" id="tf-nota" rows="2" placeholder="// qué ves en ' + esc(a.label) + '">' + esc(a.nota) + '</textarea>' +
-    (a.img ? '<div class="fila" style="margin-top:5px"><button class="cmd" data-quitar="' + slotActivo + '">[<b>quitar la captura de ' + esc(a.label) + '</b>]</button></div>' : "");
+  el("nota-activa").innerHTML = S.ia.cuando
+    ? '<div class="nota-cab"><span class="lbl" style="margin:0">lectura IA de ' + esc(a.label) + '</span>' +
+        '<span class="badge" style="color:' + colorSesgo(a.sesgo) + ';border-color:currentColor">' +
+          glifoSesgo(a.sesgo) + " " + esc(nombreSesgo(a.sesgo)) + "</span>" +
+        '<span class="pista" style="font-size:10px;color:var(--dim)">// toca otra captura para cambiar de temporalidad</span></div>' +
+      '<div class="tf-nota">' + esc(a.nota || "Sin lectura") + '</div>'
+    : '<div class="nota-cab"><span class="lbl" style="margin:0">' + esc(a.label) + '</span>' +
+        '<span class="pista" style="font-size:10px;color:var(--amber)">// pendiente de análisis IA</span></div>' +
+      (a.img ? '<div class="fila" style="margin-top:5px"><button class="cmd" data-quitar="' + slotActivo + '">[<b>quitar la captura de ' + esc(a.label) + '</b>]</button></div>' : '');
 }
 
 /* ================= render: confluencia ================= */
@@ -1752,7 +1754,7 @@ datosVivo() + "\n\n" +
 
 function pasoLeerGraficos(){
   var cap = bloquesCapturas();
-  if(cap.imgs.length < 1) return Promise.reject(new Error("no hay capturas que analizar"));
+  if(cap.imgs.length < 4) return Promise.reject(new Error("faltan capturas: la IA necesita las cuatro"));
 
   return pasoVer(cap).then(function(lectura){
     iaTrabajando = "gráficos leídos · montando las dos operaciones…";
@@ -1787,7 +1789,7 @@ function pasoLeerGraficos(){
     var ahora = new Date(), creada = null;
     (Array.isArray(d.operaciones) ? d.operaciones : []).slice(0, 2).forEach(function(o, i){
       var swing = /swing|dia|día/i.test(String(o.horizonte || "")) && !/intra/i.test(String(o.horizonte || ""));
-      var nombre = swing ? "IA · swing 3-4 días" : "IA · intradía";
+      var nombre = swing ? "Operativa 2 · swing 3-4 días" : "Operativa 1 · intradía";
       var ficha = {
         horizonte: swing ? "swing" : "intradía",
         nombre: nombre,
@@ -1879,6 +1881,10 @@ var iaError = null;         // último fallo, hasta el siguiente intento
 
 function analizarConIA(){
   if(iaOcupada) return;
+  if(S.tfs.filter(function(t){ return t.img; }).length < 4){
+    eco("añade las cuatro capturas antes de analizar");
+    return;
+  }
   if(!servidorIA.listo){
     S.plegado.ajustes = false; pintarPlegados();
     el("sec-ajustes").scrollIntoView({behavior: reducido() ? "auto" : "smooth", block:"start"});
@@ -1902,7 +1908,7 @@ function analizarConIA(){
     })
     .then(function(){
       iaOcupada = false; iaTrabajando = null;
-      guardar(); pintarTodo();
+      guardar(); abrirAnalisis(); pintarTodo();
       var n = S.ia.operaciones.filter(function(o){ return o.operar; }).length;
       eco(n ? n + " operación(es) creadas y guardadas" : "la IA no ve ninguna operación clara");
     })
@@ -1979,8 +1985,6 @@ function pintarIA(){
         (o.disparador ? '<div class="ia-dato"><span>disparador</span>' + esc(o.disparador) + "</div>" : "") +
         (o.invalidacion ? '<div class="ia-dato"><span>invalidación</span>' + esc(o.invalidacion) + "</div>" : "") +
         (o.si_falla ? '<div class="ia-dato"><span>si falla</span>' + esc(o.si_falla) + "</div>" : "") +
-        (o.id ? '<button class="cmd est-usar" data-ia-op="' + esc(o.id) + '">[<b>' +
-          (activa ? "es la operación activa" : "ver en el mapa") + "</b>]</button>" : "") +
         "</div>";
     }).join("") + "</div>");
     if(ops.some(function(o){ return o.operar && o.tp3prov; }))
@@ -2033,7 +2037,7 @@ function pintarAjustes(){
   var b = el("btn-ia");
   var listas = S.tfs.filter(function(t){ return t.img; }).length;
   b.innerHTML = "[<b>" + (servidorIA.listo ? "analizar con IA" : "analizar con IA (sin servidor)") + "</b>]";
-  b.disabled = listas === 0 || iaOcupada;
+  b.disabled = listas < 4 || iaOcupada;
 
   var r = S.ia.resumen, extra = el("aviso-activo");
   if(r && r.aviso){
@@ -2321,30 +2325,11 @@ function pintarRiesgo(){
 function pintarValidacion(){
   var cont = el("chk-lista");
   cont.innerHTML = "";
-  CHECKS.forEach(function(c){
-    var ok = checkEstado(c);
-    var b = document.createElement(c.auto ? "div" : "button");
-    b.className = "chk " + (c.auto ? "auto " : "") + (ok ? "ok" : c.auto ? "no" : "");
-    if(!c.auto){ b.type = "button"; b.setAttribute("data-chk", c.id); b.setAttribute("aria-pressed", ok ? "true" : "false"); }
-    b.innerHTML =
-      '<span class="marca">' + (ok ? "[x]" : "[ ]") + '</span>' +
-      '<span class="t">' + esc(c.t) + (c.auto ? ' <span class="badge">auto</span>' : "") + '</span>' +
-      '<span class="p">' + c.p + '</span>';
-    cont.appendChild(b);
-  });
-
-  var sc = checkScore();
-  el("chk-score").textContent = sc.hecho + "/" + sc.total + " puntos";
-  var col = sc.pct >= 85 ? "var(--green)" : sc.pct >= 60 ? "var(--amber)" : "var(--red)";
+  var pct = iaOcupada ? 55 : S.ia.cuando ? 100 : 0;
+  el("chk-score").textContent = S.ia.cuando ? "análisis IA completado" : "pendiente de IA";
   var r = el("chk-relleno");
-  r.style.left = "0"; r.style.width = sc.pct + "%";
-  r.style.backgroundImage = "repeating-linear-gradient(90deg," + col + " 0 14px, #0A0A0A 14px 16px)";
-
-  var texto = sc.pct >= 85 ? "operación de las buenas: tamaño completo"
-            : sc.pct >= 60 ? "sirve, pero con la mitad de tamaño"
-            : "no operar: faltan demasiadas cosas";
-  el("chk-veredicto").innerHTML =
-    '<span class="ver-chip" style="color:' + col + '">' + sc.pct + " % · " + esc(texto) + "</span>";
+  r.style.left = "0"; r.style.width = pct + "%";
+  r.style.backgroundImage = "repeating-linear-gradient(90deg,var(--amber) 0 14px,#0A0A0A 14px 16px)";
 }
 
 /* ================= render: plan ================= */
@@ -2395,16 +2380,15 @@ function pintarPlan(){
 }
 
 /* ================= pintado global ================= */
-// Al abrir la app solo se ve la cabecera y los cuatro huecos. El análisis se
-// despliega al completar las capturas, o a mano con [ver el último análisis].
+// Los resultados solo se muestran después de que la IA haya terminado.
 function pintarVista(){
   var conCapturas = S.tfs.filter(function(t){ return t.img; }).length;
   el("analisis").hidden = vista !== "analisis";
   ["caja-veredicto","lbl-sesgo","ver-nota"].forEach(function(id){
     el(id).hidden = vista !== "analisis";
   });
-  el("btn-ultimo").hidden = !(vista === "inicio" && conCapturas > 0);
-  el("btn-ultimo").innerHTML = "[<b>ver el último análisis (" + conCapturas + "/4)</b>]";
+  el("btn-ultimo").hidden = !(vista === "inicio" && S.ia.cuando);
+  el("btn-ultimo").innerHTML = "[<b>ver el último análisis IA</b>]";
   el("eco-sup").textContent = vista === "inicio"
     ? (conCapturas ? "// tienes un análisis guardado" : "// añade las cuatro capturas para empezar")
     : "// " + S.activo + " · " + conCapturas + "/4 capturas";
@@ -2429,10 +2413,10 @@ function pintarPlegados(){
 }
 
 function abrirAnalisis(){
+  if(!S.ia.cuando) return;
   if(vista === "analisis") return;
   vista = "analisis";
   pintarTodo();
-  requestAnimationFrame(function(){ renderMapa(); });
 }
 
 function pintarTodo(){
@@ -2483,10 +2467,13 @@ function meterImagen(i, file){
     if(!dataUrl) return;
     S.tfs[i].img = dataUrl;
     S.tfs[i].activo = S.activo;    // para poder avisar si luego se cambia de par
+    S.ia.cuando = null;
+    S.ia.resumen = null;
+    S.ia.operaciones = [];
+    vista = "inicio";
     slotActivo = Math.min(3, i + 1);
     guardar();
-    if(S.tfs.every(function(t){ return t.img; })) abrirAnalisis();   // las cuatro puestas
-    else { renderTFs(); pintarVista(); }
+    renderTFs(); pintarVista();
   });
 }
 var inputFile = document.createElement("input");
@@ -2513,7 +2500,8 @@ function conectar(){
     var q = e.target.closest("[data-quitar]");
     if(q){
       S.tfs[+q.getAttribute("data-quitar")].img = null;
-      guardar(); renderTFs(); return;
+      S.ia.cuando = null; S.ia.resumen = null; S.ia.operaciones = []; vista = "inicio";
+      guardar(); renderTFs(); pintarVista(); return;
     }
   });
   el("nota-activa").addEventListener("input", function(e){
@@ -2521,7 +2509,11 @@ function conectar(){
   });
   el("nota-activa").addEventListener("click", function(e){
     var q = e.target.closest("[data-quitar]");
-    if(q){ S.tfs[+q.getAttribute("data-quitar")].img = null; guardar(); renderTFs(); }
+    if(q){
+      S.tfs[+q.getAttribute("data-quitar")].img = null;
+      S.ia.cuando = null; S.ia.resumen = null; S.ia.operaciones = []; vista = "inicio";
+      guardar(); renderTFs(); pintarVista();
+    }
   });
   ["dragenter","dragover"].forEach(function(ev){
     rej.addEventListener(ev, function(e){
@@ -2562,7 +2554,8 @@ function conectar(){
   }
   el("btn-limpiar-img").addEventListener("click", function(){
     S.tfs.forEach(function(t){ t.img = null; });
-    guardar(); renderTFs();
+    S.ia.cuando = null; S.ia.resumen = null; S.ia.operaciones = []; vista = "inicio";
+    guardar(); renderTFs(); pintarVista();
   });
 
   /* --- lupa --- */
@@ -2788,10 +2781,9 @@ function conectar(){
   var destinos = [
     {id:"sec-evidencia",  l:"evidencia",   corto:"evid",  c:"var(--violet)"},
     {id:"sec-confluencia",l:"confluencia", corto:"conf",  c:"var(--amber)"},
-    {id:"sec-estrategias",l:"estrategias", corto:"estr",  c:"var(--violet)"},
-    {id:"sec-mapa",       l:"mapa",        corto:"mapa",  c:"var(--green)"},
-    {id:"sec-riesgo",     l:"riesgo",      corto:"riesgo",c:"var(--orange)"},
-    {id:"sec-plan",       l:"plan",        corto:"plan",  c:"var(--white)"}
+    {id:"sec-niveles",    l:"niveles",     corto:"niv",   c:"var(--blue)"},
+    {id:"sec-estrategias",l:"operativas IA",corto:"IA",   c:"var(--violet)"},
+    {id:"sec-validacion", l:"validación IA",corto:"valid",c:"var(--amber)"}
   ];
   el("pie-nav").innerHTML = destinos.map(function(d){
     return '<button data-ir="' + d.id + '">[<b style="color:' + d.c + '">' +
